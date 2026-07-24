@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>專題研習口頭報告初稿製作平台</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PptxGenJS -->
+    <script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/libs/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.min.js"></script>
+    <!-- html2pdf -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <style>
+        /* 色彩與動感背景 */
+        body { 
+            font-family: 'PingFang HK', 'Microsoft JhengHei', sans-serif; 
+            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            background-attachment: fixed;
+            color: #333; 
+        }
+        .hidden { display: none !important; }
+        
+        /* 基礎表格與動畫按鈕樣式 */
+        .obj-table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; background: rgba(255,255,255,0.9); backdrop-filter: blur(5px); }
+        .obj-table th, .obj-table td { border: 1px solid #cbd5e1; padding: 12px; vertical-align: top; line-height: 1.6; font-size: 0.95rem; }
+        .obj-table th { background: linear-gradient(to right, #e0f2fe, #dbeafe); color: #1e3a8a; }
+        
+        .topic-btn { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; border: 2px solid transparent; }
+        .topic-btn:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 15px 25px -5px rgba(59, 130, 246, 0.4); border-color: #60a5fa; background: linear-gradient(to bottom right, #ffffff, #f0f9ff); }
+        .topic-btn.selected { border-color: #3b82f6; background: linear-gradient(to right, #eff6ff, #dbeafe); box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3); transform: scale(1.02); }
+        
+        .tab-btn { border-bottom: 4px solid transparent; transition: all 0.3s ease; cursor: pointer; }
+        .tab-btn.active { border-bottom-color: #3b82f6; color: #1d4ed8; font-weight: 800; background: linear-gradient(to top, #eff6ff, #ffffff); }
+        .tab-btn:hover:not(.active) { background-color: #f8fafc; color: #2563eb; }
+        
+        /* 左右分屏工作區 */
+        .workspace { display: flex; gap: 24px; align-items: stretch; min-height: 650px; flex-direction: column; }
+        @media (min-width: 1024px) { .workspace { flex-direction: row; } }
+        .editor-panel { flex: 1.2; overflow-y: auto; background: rgba(255,255,255,0.95); padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; backdrop-filter: blur(10px); }
+        .preview-panel { flex: 1; overflow-y: auto; background: #f8fafc; padding: 25px; border-radius: 16px; box-shadow: inset 0 2px 15px rgba(0,0,0,0.05), 0 10px 30px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; position: sticky; top: 80px; height: calc(100vh - 100px); }
+        
+        /* 簡報顯示屏樣式 */
+        .slide-container { width: 100%; aspect-ratio: 16 / 9; position: relative; padding: 5%; box-sizing: border-box; display: flex; flex-direction: column; transition: all 0.5s ease; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); overflow: hidden; background-size: cover; background-position: center; }
+        .slide-title { font-size: clamp(18px, 3.5vw, 28px); font-weight: 900; margin-bottom: 4%; padding-bottom: 2%; flex-shrink: 0; z-index: 2; position: relative; transition: color 0.3s ease; }
+        .slide-body-wrapper { display: flex; flex: 1; gap: 20px; overflow: hidden; z-index: 2; position: relative; }
+        .slide-content { font-size: clamp(13px, 2vw, 18px); line-height: 1.7; white-space: pre-wrap; flex: 1; overflow-y: auto; transition: color 0.3s ease; }
+        .slide-uploaded-img { max-width: 48%; max-height: 100%; object-fit: contain; border-radius: 8px; box-shadow: 0 8px 16px rgba(0,0,0,0.15); display: none; flex-shrink: 0; z-index: 2; position: relative; }
+
+        /* 輸入框與表格色彩強化 */
+        .data-table-input { width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; font-size: 0.9rem; outline: none; transition: 0.3s; }
+        .data-table-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+        .data-table th { background: linear-gradient(90deg, #0ea5e9, #2563eb); color: white; padding: 10px; text-align: center; border: 1px solid #0284c7; font-weight: bold; letter-spacing: 1px;}
+        .data-table td { border: 1px solid #cbd5e1; padding: 10px; vertical-align: middle; background: #fff; }
+        
+        /* 浮動儲存按鈕 */
+        .floating-save-btn { position: fixed; bottom: 30px; right: 30px; z-index: 9999; background: linear-gradient(135deg, #10b981, #059669); color: white; font-weight: bold; padding: 15px 25px; border-radius: 50px; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.5); cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; font-size: 1.1rem; }
+        .floating-save-btn:hover { transform: translateY(-5px) scale(1.05); box-shadow: 0 15px 30px rgba(16, 185, 129, 0.6); }
+
+        /* 8 種預設簡報風格 */
+        .theme-office { background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%); border-left: 12px solid #283593; }
+        .theme-office .slide-title { color: #283593; border-bottom: 2px solid #283593; }
+        .theme-edu { background: #fffaf0; border: 5px solid #0097a7; border-radius: 24px; }
+        .theme-edu .slide-title { color: #0097a7; border-bottom: 3px dotted #0097a7; text-align: center; }
+        .theme-nature { background: linear-gradient(to right bottom, #f4fbf4, #e8f5e9); border-radius: 20px 0 20px 0; border-left: 8px solid #2e7d32; }
+        .theme-nature .slide-title { color: #2e7d32; border-bottom: 2px solid #2e7d32; }
+        .theme-design { background: #ffffff; background-image: radial-gradient(#d81b60 1px, transparent 1px); background-size: 20px 20px; border: 1px solid #eaeaea; }
+        .theme-design .slide-title { color: #d81b60; background: rgba(255,255,255,0.9); padding: 5px 15px; border-radius: 8px; display: inline-block; }
+        .theme-tech { background: #1a1a2e; color: #ecf0f1; box-shadow: inset 0 0 0 2px #fbbf24; }
+        .theme-tech .slide-title { color: #fbbf24; border-bottom: 1px dashed #fbbf24; }
+        .theme-tech .slide-content { color: #dcdde1; }
+        .theme-catering { background: #fffcf5; border-top: 10px solid #e65100; border-bottom: 3px solid #e65100; }
+        .theme-catering .slide-title { color: #e65100; border-bottom: 2px dashed #e65100; text-align: center; }
+        .theme-construction { background: #fdfbf7; border-left: 15px solid #37474f; border-bottom: 8px solid #2c3e50; }
+        .theme-construction .slide-title { background: #37474f; color: #fff; padding: 6px 20px; display: inline-block; border-radius: 4px; }
+        .theme-minimalist { background: #ffffff; border: 1px solid #eaeaea; border-left: 3px solid #000000; }
+        .theme-minimalist .slide-title { color: #000000; border-bottom: 1px solid #000000; letter-spacing: 2px; }
+
+        /* A60/A61 HTML 示範特製樣式 */
+        .demo-flowchart { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
+        .demo-box-main { background: #e2e8f0; border-radius: 8px; padding: 15px; text-align: center; width: 80%; position: relative; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .demo-box-main::after { content: '↓'; position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 24px; color: #94a3b8; }
+        .demo-sub-boxes { display: flex; gap: 15px; justify-content: center; width: 100%; }
+        .demo-box-sub { flex: 1; padding: 10px; border-radius: 8px; color: white; font-weight: bold; text-align: center; font-size: 0.9rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .demo-bg-1 { background-color: #0284c7; }
+        .demo-bg-2 { background-color: #ea580c; }
+        .demo-bg-3 { background-color: #65a30d; }
+        .demo-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: white; margin-bottom: 20px;}
+        .demo-table th { background: #0284c7; color: white; padding: 8px; text-align: center; border: 1px solid #e2e8f0; }
+        .demo-table td { border: 1px solid #e2e8f0; padding: 8px; vertical-align: middle; }
+        
+        /* Modal 樣式 */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .modal-content { background: #fff; padding: 30px; border-radius: 16px; width: 95%; max-width: 950px; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .modal-close { position: absolute; top: 15px; right: 20px; font-size: 32px; cursor: pointer; color: #64748b; transition: 0.2s; }
+        .modal-close:hover { color: #ef4444; transform: rotate(90deg); }
+        
+        .fade-in { animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="text-gray-800 antialiased">
+
+    <!-- 頂部導覽列 -->
+    <nav class="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 text-white p-4 shadow-xl sticky top-0 z-50">
+        <div class="container mx-auto flex justify-between items-center max-w-7xl">
+            <h1 class="text-xl md:text-2xl font-extrabold tracking-wide flex items-center gap-2">
+                <span class="text-3xl animate-bounce">🎓</span> 專題研習口頭報告初稿製作平台
+            </h1>
+            <button onclick="goHome()" class="bg-white/20 hover:bg-white/30 backdrop-blur border border-white/40 px-5 py-2 rounded-full text-sm font-bold shadow-lg transition transform hover:-translate-y-1">🏠 回首頁</button>
+        </div>
+    </nav>
+
+    <!-- 浮動儲存按鈕 -->
+    <div class="floating-save-btn" onclick="saveProgress()">
+        <span class="text-2xl">💾</span> 儲存進度
+    </div>
+
+    <!-- 視圖 1：首頁 (學習目標與題目選擇) -->
+    <div id="view-home" class="container mx-auto p-6 max-w-7xl fade-in mt-4">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10">
+            
+            <!-- 左側：影片與目標 -->
+            <div class="lg:col-span-5 flex flex-col gap-6">
+                <!-- 示範影片區 -->
+                <div class="bg-white p-6 rounded-2xl shadow-xl border-t-8 border-blue-500 text-center relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500"></div>
+                    <h2 class="text-xl font-bold mb-2 text-blue-900 flex items-center justify-center gap-2"><span class="text-2xl">📺</span> 觀看口頭匯報示範</h2>
+                    <p class="text-sm text-gray-600 mb-5">在開始製作前，請先點擊觀看標準示範影片，了解報告結構與技巧。</p>
+                    
+                    <div class="w-full bg-gray-900 rounded-xl overflow-hidden shadow-2xl border-4 border-gray-100" style="position: relative; padding-bottom: 56.25%; height: 0;">
+                        <iframe src="https://vtc.ap.panopto.com/Panopto/Pages/Embed.aspx?id=3548f690-14a8-46aa-b7b0-b1cc00348f41&autoplay=false&offerviewer=true&showtitle=true&showbrand=true&captions=false&interactivity=all" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" frameborder="0" allowfullscreen allow="autoplay"></iframe>
+                    </div>
+                    
+                    <div class="mt-6 flex flex-col sm:flex-row items-center justify-center gap-6 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                        <div class="flex flex-col items-center justify-center gap-3">
+                            <p class="text-sm font-bold text-blue-800">🚌 查閱圖文報告示範：</p>
+                            <a href="https://winwin1109.github.io/4002-lt7-demonstration/" target="_blank" class="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-2 px-6 rounded-full shadow-lg transition transform hover:-translate-y-1 hover:scale-105 flex items-center gap-2">
+                                <span>星級大獎 (九巴)</span> <span class="text-lg">↗️</span>
+                            </a>
+                        </div>
+                        <div class="h-16 w-px bg-blue-200 hidden sm:block"></div>
+                        <div class="flex flex-col items-center">
+                            <p class="text-xs font-bold text-gray-600 mb-2">📱 手機掃描觀看：</p>
+                            <img src="l9-q2.png" alt="QR Code" class="w-20 h-20 border-2 border-white rounded shadow-md bg-white hover:scale-150 transition-transform duration-300 origin-bottom-right">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 預期學習目標 -->
+                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl shadow-xl border border-blue-200 flex-grow">
+                    <h2 class="text-lg font-extrabold mb-3 text-indigo-900 flex items-center gap-2"><span class="text-2xl">🎯</span> 預期學習目標</h2>
+                    <p class="mb-4 text-xs text-gray-700 leading-relaxed text-justify font-medium bg-white/60 p-3 rounded-lg border border-white/80 shadow-sm">普通話報告單元將以專題研習的形式進行。除了課堂上老師教授的各種語言功能外，同學還需要結合專業知識，通過資料搜集、分析、歸納、簡報製作及團隊協作等，逐步掌握日後工作所需的各項技能。專題研習的學習成果以口頭報告的方式呈現，佔本科總成績的50%(EA)。</p>
+                    
+                    <div class="overflow-hidden rounded-xl shadow-sm border border-indigo-100">
+                        <table class="obj-table text-xs m-0">
+                            <thead>
+                                <tr>
+                                    <th width="50%">評分標準</th>
+                                    <th width="50%">能力培養</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white/80">
+                                <tr>
+                                    <td>
+                                        <strong>小組報告分工：</strong><br>1）每人負責一個分論點，時間約3至4分鐘<br><br>
+                                        <strong>語言功能——論證：</strong><br>1）論證結構完整<br>2）論證方法多樣<br>3）論據豐富（需具備一手和二手資料）<br><br>
+                                        <strong>語言表達：</strong><br>1）語音面貌（普通話語音標準程度、流暢度等）<br>2）語言運用（論證用語、標示語、詞彙及句式）<br>3）說話策略（匯報技巧）<br><br>
+                                        <strong>團隊合作：</strong><br>1）積極參與討論、按時提交功課<br>2）匯報整體性強
+                                    </td>
+                                    <td>
+                                        <strong>思維能力：</strong><br>1）正確理解題目要求，確定內容重點<br>2）搜集及整合資料，選用合適的論證方法，結合專業知識和論證技巧增強說服力<br>3）能解難、反思、批判及修訂<br><br>
+                                        <strong>項目管理能力：</strong><br>1）合理制定計劃、時間管理、溝通協作、預判及處理意外情況、討論反饋及改善<br><br>
+                                        <strong>數碼素養：</strong><br>1）使用各種數碼工具，檢索資訊、分析和整理資料，製作簡報<br><br>
+                                        <strong>語言運用能力</strong><br><br>
+                                        <strong>協作能力</strong>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側：題目選擇與資料填寫 -->
+            <div class="lg:col-span-7 bg-white p-8 rounded-2xl shadow-2xl border border-gray-100 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-blue-100 rounded-bl-full -z-10 opacity-50"></div>
+                
+                <h2 class="text-2xl font-black mb-5 text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700 border-b-2 border-blue-100 pb-3 flex items-center gap-2">
+                    <span>📝</span> 步驟一：選擇專題研習題目
+                </h2>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8" id="topic-grid">
+                    <!-- 動態生成題目按鈕 -->
+                </div>
+
+                <h2 class="text-2xl font-black mb-5 text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 to-purple-700 border-b-2 border-indigo-100 pb-3 flex items-center gap-2">
+                    <span>👤</span> 步驟二：填寫基本資料
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8 bg-gradient-to-br from-gray-50 to-blue-50 p-6 rounded-xl border border-blue-100 shadow-inner">
+                    <div><label class="block text-sm font-bold text-gray-700 mb-2">班級</label><input type="text" id="stu-class" placeholder="例：EG114001/2C" class="w-full border-2 border-white shadow-sm p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"></div>
+                    <div><label class="block text-sm font-bold text-gray-700 mb-2">小組編號</label><input type="text" id="stu-group" placeholder="例：第 1 組" class="w-full border-2 border-white shadow-sm p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"></div>
+                    <div><label class="block text-sm font-bold text-gray-700 mb-2">學號</label><input type="text" id="stu-id" placeholder="例：20010101" class="w-full border-2 border-white shadow-sm p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"></div>
+                    <div><label class="block text-sm font-bold text-gray-700 mb-2">姓名</label><input type="text" id="stu-name" placeholder="例：陳柏新" class="w-full border-2 border-white shadow-sm p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"></div>
+                    <div class="md:col-span-2"><label class="block text-sm font-bold text-gray-700 mb-2">論證目標對象 (機構/景點/品牌)</label><input type="text" id="stu-target" placeholder="例：富臨飯店 / 西九文化區 / 蔚藍幼稚園" class="w-full border-2 border-white shadow-sm p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition font-bold text-blue-800"></div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">您負責的評審標準 (分論點)</label>
+                        <select id="stu-part" class="w-full border-2 border-white shadow-sm p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition bg-white disabled:bg-gray-200 font-bold text-indigo-800" disabled>
+                            <option value="">請先在上方選擇題目...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button onclick="enterWorkspace()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-xl py-5 rounded-2xl shadow-xl hover:from-blue-700 hover:to-indigo-700 hover:shadow-2xl transition-all transform hover:-translate-y-2 flex justify-center items-center gap-3">
+                    <span class="text-3xl">🚀</span> 進入簡報初稿製作空間
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 視圖 2：製作工作區 -->
+    <div id="workspace-view" class="container mx-auto p-4 max-w-[1500px] hidden fade-in">
+        
+        <!-- 頂部動態資訊列 -->
+        <div class="bg-gradient-to-r from-blue-800 to-indigo-900 text-white px-8 py-5 rounded-2xl shadow-lg mb-8 flex flex-col md:flex-row justify-between items-start md:items-center relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-64 h-full bg-white opacity-5 transform skew-x-12"></div>
+            <div class="z-10">
+                <h2 id="ws-topic-title" class="text-2xl font-black mb-1 drop-shadow-md">題目：載入中...</h2>
+                <p id="ws-target-title" class="text-md text-blue-200 font-bold tracking-wide"></p>
+            </div>
+            <div class="z-10 mt-4 md:mt-0 text-right">
+                <div class="bg-white/20 backdrop-blur px-5 py-2 rounded-full border border-white/30 text-sm font-bold shadow-inner" id="ws-student-info"></div>
+            </div>
+        </div>
+
+        <!-- 模塊切換 Tabs -->
+        <div class="flex border-b-4 border-gray-200 mb-8 px-4 gap-2">
+            <button onclick="switchMainTab('part1')" id="tab-part1" class="tab-btn active px-10 py-4 text-xl rounded-t-2xl bg-white border-t-2 border-l-2 border-r-2 border-gray-200 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] transition-all">📝 第一部分：資料蒐集與論證結構</button>
+            <button onclick="switchMainTab('part2')" id="tab-part2" class="tab-btn px-10 py-4 text-xl rounded-t-2xl text-gray-500 hover:text-blue-700 hover:bg-blue-50 transition-all border-b-4 border-transparent">🖼️ 第二部分：簡報初稿視覺製作</button>
+        </div>
+
+        <!-- ==================== 第一部分：資料蒐集 ==================== -->
+        <div id="content-part1" class="bg-white p-8 md:p-10 rounded-b-2xl rounded-tr-2xl shadow-2xl border border-gray-100">
+            
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-10 mb-10">
+                <!-- AI 平台選擇 -->
+                <div class="bg-gradient-to-br from-gray-50 to-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                    <h3 class="text-xl font-black mb-4 flex items-center text-gray-800"><span class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 shadow-md text-sm">1</span> 選擇 AI 輔助平台</h3>
+                    <p class="text-sm text-gray-500 mb-5 font-medium">小組內請分工使用不同平台，點擊「前往」可直接開新視窗。</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div class="flex items-center justify-between bg-white p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
+                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700"><input type="checkbox" name="ai-platform" value="VTC GenAI" class="w-5 h-5 accent-blue-600"><span>VTC GenAI</span></label>
+                            <a href="https://genai.vtc.edu.hk/" target="_blank" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-bold border border-blue-200">🔗 前往</a>
+                        </div>
+                        <div class="flex items-center justify-between bg-white p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
+                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700"><input type="checkbox" name="ai-platform" value="Google Gemini" class="w-5 h-5 accent-blue-600"><span>Gemini</span></label>
+                            <a href="https://gemini.google.com/" target="_blank" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-bold border border-blue-200">🔗 前往</a>
+                        </div>
+                        <div class="flex items-center justify-between bg-white p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
+                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700"><input type="checkbox" name="ai-platform" value="Microsoft Copilot" class="w-5 h-5 accent-blue-600"><span>Copilot</span></label>
+                            <a href="https://copilot.microsoft.com/" target="_blank" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-bold border border-blue-200">🔗 前往</a>
+                        </div>
+                        <div class="flex items-center justify-between bg-white p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
+                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700"><input type="checkbox" name="ai-platform" value="豆包 (Doubao)" class="w-5 h-5 accent-blue-600"><span>豆包 (Doubao)</span></label>
+                            <a href="https://www.doubao.com/" target="_blank" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-bold border border-blue-200">🔗 前往</a>
+                        </div>
+                        <div class="flex items-center justify-between bg-white p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
+                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700"><input type="checkbox" name="ai-platform" value="Perplexity" class="w-5 h-5 accent-blue-600"><span>Perplexity</span></label>
+                            <a href="https://www.perplexity.ai/" target="_blank" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-bold border border-blue-200">🔗 前往</a>
+                        </div>
+                        <div class="flex items-center justify-between bg-white p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
+                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700"><input type="checkbox" name="ai-platform" value="Grok" class="w-5 h-5 accent-blue-600"><span>Grok</span></label>
+                            <a href="https://grok.x.ai/" target="_blank" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-bold border border-blue-200">🔗 前往</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 倫理聲明 -->
+                <div class="bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-300 p-6 rounded-2xl shadow-md relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 text-7xl opacity-10">⚖️</div>
+                    <h3 class="text-xl font-black text-yellow-900 mb-3 flex items-center gap-2"><span>⚖️</span> 真相核查員 (Ethics & Fact Checker)</h3>
+                    <p class="text-sm text-yellow-800 mb-5 leading-relaxed font-medium bg-white/50 p-3 rounded border border-yellow-200">
+                        遵守學術誠信：界定可用範圍；不輸入敏感資料；尊重知識產權；留意偏見；不以 AI 取代個人思考。
+                    </p>
+                    <div class="space-y-4 bg-white p-4 rounded-xl border border-yellow-200 shadow-sm">
+                        <label class="flex items-start space-x-3 cursor-pointer p-2 hover:bg-yellow-50 rounded transition">
+                            <input type="checkbox" id="ethics-1" class="mt-1 w-5 h-5 accent-yellow-600 rounded">
+                            <span class="text-gray-800 font-bold text-sm">不依賴代寫：<span class="font-normal text-gray-600">我已理解內容並能獨立口述或重寫。</span></span>
+                        </label>
+                        <label class="flex items-start space-x-3 cursor-pointer p-2 hover:bg-yellow-50 rounded transition">
+                            <input type="checkbox" id="ethics-2" class="mt-1 w-5 h-5 accent-yellow-600 rounded">
+                            <span class="text-gray-800 font-bold text-sm">資料核實：<span class="font-normal text-gray-600">我已用搜尋工具驗證 AI 提供的數據與行業常識。</span></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1. 原始資料結構 -->
+            <div class="bg-white p-6 rounded-2xl border-2 border-gray-200 mb-8 shadow-sm">
+                <h3 class="text-lg font-black text-gray-800 mb-4 border-l-8 border-gray-400 pl-3">2. 從 AI 獲得的原始資料結構：</h3>
+                <div id="ai-structure-hint" class="text-sm text-blue-800 mb-5 bg-blue-50 p-4 rounded-lg border border-blue-200 shadow-inner font-bold flex gap-3 items-start">
+                    <span class="text-xl">💡</span> <span id="hint-text">指示語載入中...</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="ai-raw-list">
+                    <div class="flex items-center gap-3 bg-gray-50 p-2 rounded-lg border border-gray-200"><span class="font-black text-gray-400 w-5 text-center text-lg">1</span><input type="text" id="ai-raw-1" class="data-table-input flex-grow bg-transparent border-0 shadow-none focus:ring-0" placeholder="填入重點資料 1"></div>
+                    <div class="flex items-center gap-3 bg-gray-50 p-2 rounded-lg border border-gray-200"><span class="font-black text-gray-400 w-5 text-center text-lg">2</span><input type="text" id="ai-raw-2" class="data-table-input flex-grow bg-transparent border-0 shadow-none focus:ring-0" placeholder="填入重點資料 2"></div>
+                    <div class="flex items-center gap-3 bg-gray-50 p-2 rounded-lg border border-gray-200"><span class="font-black text-gray-400 w-5 text-center text-lg">3</span><input type="text" id="ai-raw-3" class="data-table-input flex-grow bg-transparent border-0 shadow-none focus:ring-0" placeholder="填入重點資料 3"></div>
+                    <div class="flex items-center gap-3 bg-gray-50 p-2 rounded-lg border border-gray-200"><span class="font-black text-gray-400 w-5 text-center text-lg">4</span><input type="text" id="ai-raw-4" class="data-table-input flex-grow bg-transparent border-0 shadow-none focus:ring-0" placeholder="填入重點資料 4"></div>
+                    <div class="flex items-center gap-3 bg-gray-50 p-2 rounded-lg border border-gray-200"><span class="font-black text-gray-400 w-5 text-center text-lg">5</span><input type="text" id="ai-raw-5" class="data-table-input flex-grow bg-transparent border-0 shadow-none focus:ring-0" placeholder="填入重點資料 5"></div>
+                    <div class="flex items-center gap-3 bg-gray-50 p-2 rounded-lg border border-gray-200"><span class="font-black text-gray-400 w-5 text-center text-lg">6</span><input type="text" id="ai-raw-6" class="data-table-input flex-grow bg-transparent border-0 shadow-none focus:ring-0" placeholder="填入重點資料 6"></div>
+                </div>
+            </div>
+
+            <!-- 2. 篩選與重新編寫 -->
+            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl border-2 border-blue-200 mb-8 shadow-sm">
+                <h3 class="text-lg font-black text-blue-900 mb-5 border-l-8 border-blue-600 pl-3">3. 經過篩選、整合和重新編寫的資料：</h3>
+                <div class="space-y-4" id="ai-filtered-list">
+                    <!-- JS 動態生成 6 列雙欄位 -->
+                </div>
+            </div>
+
+            <!-- 3. 論證結構表格 (動態新增) -->
+            <div class="bg-gradient-to-br from-emerald-50 to-green-50 p-6 rounded-2xl border-2 border-emerald-300 mb-8 relative shadow-md">
+                <div class="flex justify-between items-center mb-5 border-b border-emerald-200 pb-3">
+                    <h3 class="text-lg font-black text-emerald-900 border-l-8 border-emerald-600 pl-3">4. 資料蒐集與論證結構 (鋪排簡報內容)：</h3>
+                    <button onclick="openTableExample()" class="bg-gradient-to-r from-orange-400 to-red-500 text-white px-5 py-2 rounded-full text-sm font-bold hover:shadow-lg hover:scale-105 transition flex items-center gap-2">
+                        <span class="text-lg">👀</span> 點擊看填寫示範
+                    </button>
+                </div>
+                
+                <p class="text-sm text-emerald-800 mb-5 font-medium bg-white/60 p-3 rounded-lg border border-white">請將上述重整後的資料，結合您親自搜集的調查，填入以下表格構建論據。如有需要，可點擊下方按鈕新增論證方向。</p>
+                
+                <div class="overflow-x-auto rounded-xl border border-emerald-200 shadow-sm">
+                    <table class="data-table w-full bg-white text-sm" id="args-table-container">
+                        <thead>
+                            <tr class="bg-emerald-600 text-white">
+                                <th width="22%" class="py-3">論證方向 (次分論點)</th>
+                                <th width="38%" class="py-3">論據</th>
+                                <th width="20%" class="py-3">資料搜集方法</th>
+                                <th width="20%" class="py-3">論證方法</th>
+                            </tr>
+                        </thead>
+                        <!-- 預設生成 2 個 Direction，多出的可用新增按鈕加 -->
+                        <tbody class="border-b-4 border-emerald-100">
+                            <tr>
+                                <td rowspan="2" class="bg-blue-50/50 p-2"><textarea id="arg-dir-1" class="w-full h-full min-h-[90px] border-0 bg-transparent resize-none outline-none font-bold text-blue-900 text-center" placeholder="輸入次分論點一方向..."></textarea></td>
+                                <td class="p-2"><div class="flex gap-2"><span class="font-black text-blue-300 mt-1">1.</span><textarea id="arg-ev-1-1" class="w-full border border-gray-200 rounded p-2 resize-none outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 h-16" placeholder="論據內容..."></textarea></div></td>
+                                <td class="p-2 align-middle">
+                                    <select id="arg-src-1-1" class="w-full border border-gray-300 rounded p-2 outline-none focus:border-blue-500 bg-gray-50">
+                                        <option value="一手資料">一手資料</option><option value="二手資料">二手資料</option><option value="一手及二手資料">一手及二手</option>
+                                    </select>
+                                </td>
+                                <td class="p-2 align-middle"><input type="text" id="arg-mth-1-1" class="w-full border border-gray-300 rounded p-2 outline-none focus:border-blue-500 bg-gray-50" placeholder="例:引用數據"></td>
+                            </tr>
+                            <tr>
+                                <td class="p-2 border-t border-gray-100"><div class="flex gap-2"><span class="font-black text-blue-300 mt-1">2.</span><textarea id="arg-ev-1-2" class="w-full border border-gray-200 rounded p-2 resize-none outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 h-16" placeholder="論據內容..."></textarea></div></td>
+                                <td class="p-2 align-middle border-t border-gray-100">
+                                    <select id="arg-src-1-2" class="w-full border border-gray-300 rounded p-2 outline-none focus:border-blue-500 bg-gray-50">
+                                        <option value="二手資料">二手資料</option><option value="一手資料">一手資料</option><option value="一手及二手資料">一手及二手</option>
+                                    </select>
+                                </td>
+                                <td class="p-2 align-middle border-t border-gray-100"><input type="text" id="arg-mth-1-2" class="w-full border border-gray-300 rounded p-2 outline-none focus:border-blue-500 bg-gray-50" placeholder="例:實地觀察分析"></td>
+                            </tr>
+                        </tbody>
+                        <tbody id="tbody-2">
+                            <tr>
+                                <td rowspan="2" class="bg-orange-50/50 p-2"><textarea id="arg-dir-2" class="w-full h-full min-h-[90px] border-0 bg-transparent resize-none outline-none font-bold text-orange-900 text-center" placeholder="輸入次分論點二方向..."></textarea></td>
+                                <td class="p-2"><div class="flex gap-2"><span class="font-black text-orange-300 mt-1">1.</span><textarea id="arg-ev-2-1" class="w-full border border-gray-200 rounded p-2 resize-none outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 h-16" placeholder="論據內容..."></textarea></div></td>
+                                <td class="p-2 align-middle">
+                                    <select id="arg-src-2-1" class="w-full border border-gray-300 rounded p-2 outline-none focus:border-orange-500 bg-gray-50">
+                                        <option value="一手資料">一手資料</option><option value="二手資料">二手資料</option><option value="一手及二手資料">一手及二手</option>
+                                    </select>
+                                </td>
+                                <td class="p-2 align-middle"><input type="text" id="arg-mth-2-1" class="w-full border border-gray-300 rounded p-2 outline-none focus:border-orange-500 bg-gray-50" placeholder="例:問卷調查"></td>
+                            </tr>
+                            <tr>
+                                <td class="p-2 border-t border-gray-100"><div class="flex gap-2"><span class="font-black text-orange-300 mt-1">2.</span><textarea id="arg-ev-2-2" class="w-full border border-gray-200 rounded p-2 resize-none outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 h-16" placeholder="論據內容..."></textarea></div></td>
+                                <td class="p-2 align-middle border-t border-gray-100">
+                                    <select id="arg-src-2-2" class="w-full border border-gray-300 rounded p-2 outline-none focus:border-orange-500 bg-gray-50">
+                                        <option value="二手資料">二手資料</option><option value="一手資料">一手資料</option><option value="一手及二手資料">一手及二手</option>
+                                    </select>
+                                </td>
+                                <td class="p-2 align-middle border-t border-gray-100"><input type="text" id="arg-mth-2-2" class="w-full border border-gray-300 rounded p-2 outline-none focus:border-orange-500 bg-gray-50" placeholder="例:資料篩選及分析"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-4 text-center">
+                    <button onclick="addArgDirection()" class="bg-white border-2 border-dashed border-emerald-400 text-emerald-700 font-bold px-6 py-2 rounded-lg hover:bg-emerald-50 transition shadow-sm w-full md:w-auto">
+                        ➕ 新增一項論證方向
+                    </button>
+                </div>
+            </div>
+
+            <!-- 第一部分匯出按鈕 -->
+            <div class="mt-10 flex flex-col md:flex-row justify-between items-center border-t-2 border-gray-200 pt-6 gap-4">
+                <div class="flex gap-4 w-full md:w-auto">
+                    <button onclick="exportWord()" class="flex-1 md:flex-none bg-blue-600 text-white px-8 py-4 rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-xl flex justify-center items-center transition font-bold text-lg"><span class="text-2xl mr-2">📝</span> 下載 Word 報告</button>
+                    <button onclick="exportPDF()" class="flex-1 md:flex-none bg-gray-800 text-white px-8 py-4 rounded-xl shadow-lg hover:bg-gray-900 hover:shadow-xl flex justify-center items-center transition font-bold text-lg"><span class="text-2xl mr-2">📄</span> 下載 PDF 報告</button>
+                </div>
+                <button onclick="checkPart1AndGoPart2()" class="w-full md:w-auto bg-gradient-to-r from-green-500 to-emerald-600 text-white px-12 py-4 rounded-xl font-black shadow-xl hover:from-green-600 hover:to-emerald-700 text-xl transition transform hover:-translate-y-1">
+                    進入簡報視覺製作 ➔
+                </button>
+            </div>
+        </div>
+
+        <!-- ==================== 第二部分：簡報視覺製作 (左右分屏) ==================== -->
+        <div id="content-part2" class="hidden bg-white p-6 md:p-8 rounded-b-2xl rounded-tr-2xl shadow-2xl border border-gray-100">
+            <div class="workspace">
+                
+                <!-- 左側：編輯區與提示區 -->
+                <div class="editor-panel flex flex-col relative">
+                    
+                    <!-- 頁面導覽列 -->
+                    <div class="flex items-center gap-3 overflow-x-auto pb-5 mb-5 border-b border-gray-200" id="slide-nav-list">
+                        <!-- 動態生成導覽按鈕 -->
+                    </div>
+
+                    <!-- 提示資訊區 (在簡報設計外) -->
+                    <div class="bg-yellow-50/90 border border-yellow-300 p-5 mb-6 rounded-xl shadow-sm">
+                        <p id="slide-q" class="font-bold text-yellow-900 mb-2 text-[15px] flex items-start gap-2"><span class="text-lg">🤔</span> <span>思考問題：</span></p>
+                        <p id="slide-ex" class="text-blue-800 text-[14.5px] whitespace-pre-line leading-relaxed italic font-medium mt-3 bg-white/60 p-3 rounded border border-yellow-200">💡 輔助例句：</p>
+                    </div>
+
+                    <!-- 句型框架插入器 -->
+                    <div class="mb-6 bg-blue-50/80 p-4 rounded-xl border border-blue-200 flex flex-col xl:flex-row xl:items-center gap-3 shadow-sm">
+                        <label class="font-bold text-blue-900 text-sm whitespace-nowrap">✍️ 快速套用句型：</label>
+                        <select id="sentence-template" class="w-full border-2 border-blue-300 p-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium text-gray-700 shadow-inner" onchange="applyTemplate()">
+                            <option value="">-- 選擇論證框架，系統將自動插入下方草稿區 --</option>
+                            <option value="開場介紹">【開場介紹】各位評委大家好，我們是...今天向各位證明...</option>
+                            <option value="先讚後踩">【先讚後踩(駁論)】誠然，有人認為...，然而我們實地調查發現...</option>
+                            <option value="先踩後讚">【先踩後讚(對比)】以往的設計/服務經常被詬病為...，但本項目打破常規，做到...</option>
+                            <option value="數據論證">【數據論證】為了客觀證明，問卷/測試數據顯示，高達 X% 的受訪者表示...</option>
+                            <option value="段落小結">【段落小結】由此可見，無論是...還是...，都確切印證了卓越的表現。接下來交給...</option>
+                        </select>
+                    </div>
+
+                    <!-- 編輯表單 -->
+                    <div class="flex flex-col gap-5 flex-grow">
+                        <div>
+                            <label class="text-sm font-bold text-gray-700 mb-2 block">
+                                簡報標題 (Title) <span id="slide-title-display" class="ml-2 font-black text-blue-700"></span>：
+                            </label>
+                            <input type="text" id="slide-title-input" class="w-full p-3 border-2 border-gray-300 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-inner text-lg font-bold text-gray-800" placeholder="請輸入大標題..." oninput="updatePreview()">
+                        </div>
+                        
+                        <div class="flex-grow flex flex-col">
+                            <label class="text-sm font-bold text-gray-700 mb-2 block">講稿與重點內容 (點列式)：</label>
+                            <textarea id="slide-content" class="flex-grow w-full p-4 border-2 border-gray-300 rounded-xl shadow-inner outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none text-gray-800 leading-relaxed min-h-[180px] text-[15px]" placeholder="• 請輸入內容重點...\n• ..." oninput="updatePreview()"></textarea>
+                        </div>
+
+                        <!-- 圖片上傳控制項 -->
+                        <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm mt-2">
+                            <div class="flex-1 w-full">
+                                <label class="text-xs font-bold text-gray-600 block mb-2">🖼️ 上載視覺論據：</label>
+                                <input type="file" id="slide-img-input" accept="image/*" class="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer transition" onchange="previewImage(this)">
+                            </div>
+                            <div class="w-full sm:w-1/3">
+                                <label class="text-xs font-bold text-gray-600 block mb-2">排版位置：</label>
+                                <select id="img-position" class="w-full border-2 border-gray-300 p-2.5 rounded-lg text-sm outline-none bg-white font-bold text-gray-700 focus:border-blue-500" onchange="updatePreview()">
+                                    <option value="right">圖右、文左</option>
+                                    <option value="left">圖左、文右</option>
+                                    <option value="top">圖上、文下</option>
+                                    <option value="bottom">圖下、文上</option>
+                                </select>
+                            </div>
+                            <button id="remove-img-btn" class="hidden w-full sm:w-auto bg-red-100 text-red-600 border border-red-300 px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-red-200 transition shadow-sm mt-6 sm:mt-0" onclick="removeImage(event)">移除相片</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右側：PPT 顯示屏與匯出 -->
+                <div class="preview-panel relative">
+                    <div class="w-full flex justify-between items-center mb-6 border-b border-gray-200 pb-4 sticky top-0 bg-[#f8fafc] z-10">
+                        <h3 class="font-black text-gray-800 text-lg flex items-center gap-2"><span class="text-2xl">🖥️</span> 完成的 PPT 顯示屏</h3>
+                        <div class="flex gap-3 items-center bg-white p-2 rounded-lg shadow-sm border border-gray-200">
+                            <select id="theme-style-selector" class="border-0 p-1 rounded text-sm outline-none font-bold text-blue-900 bg-transparent cursor-pointer" onchange="updateUITheme()">
+                                <option value="theme-office">🏢 商務專業</option>
+                                <option value="theme-edu">🏫 親和教育</option>
+                                <option value="theme-nature">🌿 綠色自然</option>
+                                <option value="theme-design">🎨 創意視覺</option>
+                                <option value="theme-tech">💻 科技未來</option>
+                                <option value="theme-catering">🍽️ 典雅餐飲</option>
+                                <option value="theme-construction">🚧 工業重裝</option>
+                                <option value="theme-minimalist">🤍 留白簡約</option>
+                            </select>
+                            <div class="h-6 w-px bg-gray-300 mx-1"></div>
+                            <div class="flex items-center gap-1 cursor-pointer" title="自訂主色調">
+                                <label class="text-xs font-bold text-gray-600 cursor-pointer" for="theme-color">主色：</label>
+                                <input type="color" id="theme-color" value="#283593" class="w-8 h-8 border-0 rounded cursor-pointer p-0 shadow-sm" onchange="updateUITheme()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 即時預覽容器 -->
+                    <div id="ppt-preview-container" class="slide-container theme-office">
+                        <div id="ppt-title" class="slide-title">標題預覽</div>
+                        <div class="slide-body-wrapper" id="ppt-body-wrapper">
+                            <div id="ppt-text" class="slide-content">請在左側輸入講稿重點...</div>
+                            <img id="ppt-img" class="slide-uploaded-img" src="" alt="">
+                        </div>
+                    </div>
+
+                    <!-- 匯出按鈕 -->
+                    <div class="mt-auto w-full pt-8">
+                        <button onclick="exportPPTX()" class="w-full bg-gradient-to-r from-orange-400 to-red-500 text-white py-4 rounded-xl font-black shadow-xl hover:from-orange-500 hover:to-red-600 transition flex items-center justify-center transform hover:scale-105 text-xl">
+                            <span class="text-3xl mr-3">📥</span> 一鍵匯出 PPTX 簡報檔案
+                        </button>
+                        <p class="text-xs text-gray-500 mt-3 text-center font-medium">系統將自動以等比例縮放相片，確保排版完美不變形。</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- 隱藏的 A60/A61 範例彈出視窗 (全 HTML 設計) -->
+    <div id="modal-a60" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+        <div class="modal-content">
+            <span class="modal-close" onclick="document.getElementById('modal-a60').style.display='none'">&times;</span>
+            <h2 class="text-2xl font-black text-blue-900 mb-6 border-b-2 border-blue-200 pb-3 flex items-center gap-2"><span>📋</span> 鋪排論證結構示範 (參考 A60 / A61)</h2>
+            
+            <div class="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-inner">
+                <!-- 頂部流程圖 -->
+                <div class="demo-flowchart">
+                    <div class="demo-box-main">
+                        <div class="bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded absolute -top-3 left-4 shadow-sm">清晰的觀點</div>
+                        <strong class="text-xl text-gray-800">分論點二：中心論點</strong><br>
+                        <span class="text-gray-700 font-medium text-lg mt-1 block">九巴致力為市民提供優質服務，滿足乘客的出行需求</span>
+                        <span class="text-gray-500 text-sm mt-1 block">(從方便快捷、可靠靈活和服務安全方面證明服務優質，滿足出行需要)</span>
+                    </div>
+                    <div class="demo-sub-boxes mt-6">
+                        <div class="demo-box-sub demo-bg-1 text-base py-3">次分論點 1<br>九巴提供方便快捷的<br>客運服務</div>
+                        <div class="demo-box-sub demo-bg-2 text-base py-3">次分論點 2<br>九巴的班次可靠靈活</div>
+                        <div class="demo-box-sub demo-bg-3 text-base py-3">次分論點 3<br>九巴致力提升服務安全</div>
+                    </div>
+                </div>
+
+                <!-- 次分論點 1 表格 -->
+                <div class="mb-8 mt-10 relative border border-blue-200 rounded-xl overflow-hidden shadow-md">
+                    <div class="bg-blue-600 text-white p-4 flex justify-between items-center relative">
+                        <div class="absolute -left-3 top-3 bg-yellow-400 text-yellow-900 text-sm font-bold px-3 py-1 rounded z-10 shadow">有力的論據</div>
+                        <h4 class="font-bold ml-16 text-lg">次分論點 1：九巴提供方便快捷的客運服務</h4>
+                        <div class="absolute -right-3 -bottom-4 bg-yellow-400 text-yellow-900 text-sm font-bold px-3 py-1 rounded z-10 shadow">合理的論證過程</div>
+                    </div>
+                    <table class="demo-table">
+                        <thead><tr><th width="20%">論證方向</th><th width="40%">論據</th><th width="20%">資料搜集方法</th><th width="20%">論證方法</th></tr></thead>
+                        <tbody>
+                            <tr>
+                                <td rowspan="2" class="font-bold text-gray-700 text-center bg-blue-50">覆蓋廣泛、<br>便利度最高</td>
+                                <td>1. 九巴覆蓋率達 59.8%，服務覆蓋香港各區。</td>
+                                <td class="text-center">二手資料</td>
+                                <td class="text-center">引用數據</td>
+                            </tr>
+                            <tr>
+                                <td>2. 九巴每天服務超過 220 萬人次，是其他巴士公司總服務量的 2.5 倍。</td>
+                                <td class="text-center">一手資料和二手資料</td>
+                                <td class="text-center">分析及比較數據</td>
+                            </tr>
+                            <tr>
+                                <td rowspan="3" class="font-bold text-gray-700 text-center bg-blue-50">便利市民和<br>旅客乘車</td>
+                                <td>1. 具備 16 種電子支付方式，方便市民。</td>
+                                <td class="text-center">一手資料</td>
+                                <td class="text-center">實地觀察分析</td>
+                            </tr>
+                            <tr>
+                                <td>2. 比其他巴士公司多提供 4 種信用卡支付方式，便利國際旅客。</td>
+                                <td class="text-center">一手資料和二手資料</td>
+                                <td class="text-center">分析並比較數據</td>
+                            </tr>
+                            <tr>
+                                <td>3. 國際旅客表示非常方便。</td>
+                                <td class="text-center">一手資料</td>
+                                <td class="text-center">實地訪談</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 次分論點 2 表格 -->
+                <div class="mb-8 border border-orange-200 rounded-xl overflow-hidden shadow-md">
+                    <div class="bg-orange-500 text-white p-4"><h4 class="font-bold text-lg">次分論點 2：九巴的班次可靠靈活</h4></div>
+                    <table class="demo-table">
+                        <thead><tr><th class="bg-orange-500 border-orange-600" width="20%">論證方向</th><th class="bg-orange-500 border-orange-600" width="40%">論據</th><th class="bg-orange-500 border-orange-600" width="20%">資料搜集方法</th><th class="bg-orange-500 border-orange-600" width="20%">論證方法</th></tr></thead>
+                        <tbody>
+                            <tr>
+                                <td rowspan="2" class="font-bold text-gray-700 text-center bg-orange-50">班次失誤率低，<br>市民感到滿意可靠</td>
+                                <td>1. 班次失誤率為 2.5%，服務可靠。</td>
+                                <td class="text-center">二手資料</td>
+                                <td class="text-center">引用數據</td>
+                            </tr>
+                            <tr>
+                                <td>2. 90% 的受訪者認為巴士到站時間與預定時間相符，時間合理。</td>
+                                <td class="text-center">一手資料</td>
+                                <td class="text-center">問卷調查</td>
+                            </tr>
+                            <tr>
+                                <td rowspan="2" class="font-bold text-gray-700 text-center bg-orange-50">班次靈活、<br>便利市民</td>
+                                <td>1. 節日慶典或大型活動舉行之際，九巴會安排臨時路線，配合市民外出的需要，安排靈活。</td>
+                                <td class="text-center">二手資料</td>
+                                <td class="text-center">資料篩選及分析</td>
+                            </tr>
+                            <tr>
+                                <td>2. 乘坐「大棠紅葉特別路線」的市民表示能節省乘車時間，十分方便。</td>
+                                <td class="text-center">一手資料</td>
+                                <td class="text-center">實地調查訪問</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 次分論點 3 表格 -->
+                <div class="border border-green-200 rounded-xl overflow-hidden shadow-md">
+                    <div class="bg-green-600 text-white p-4"><h4 class="font-bold text-lg">次分論點 3：九巴致力提升服務安全</h4></div>
+                    <table class="demo-table">
+                        <thead><tr><th class="bg-green-600 border-green-700" width="20%">論證方向</th><th class="bg-green-600 border-green-700" width="40%">論據</th><th class="bg-green-600 border-green-700" width="20%">資料搜集方法</th><th class="bg-green-600 border-green-700" width="20%">論證方法</th></tr></thead>
+                        <tbody>
+                            <tr>
+                                <td rowspan="2" class="font-bold text-gray-700 text-center bg-green-50">乘車安全</td>
+                                <td>1. 引入車長駕駛反饋系統後，評分為「安全駕駛」級別的車長比例由 2020 年的 75% 提升至 2022 年的約 87%，服務更安全。</td>
+                                <td class="text-center">二手資料</td>
+                                <td class="text-center">引用數據</td>
+                            </tr>
+                            <tr>
+                                <td>2. 車隊每月平均意外率減少兩成，越趨安全。</td>
+                                <td class="text-center">二手資料</td>
+                                <td class="text-center">引用數據</td>
+                            </tr>
+                            <tr>
+                                <td rowspan="2" class="font-bold text-gray-700 text-center bg-green-50">意外率低</td>
+                                <td>1. 電子檢測系統，可防止輪胎打滑並保持車身穩定，避免發生意外。</td>
+                                <td class="text-center">二手資料</td>
+                                <td class="text-center">資料篩選分析</td>
+                            </tr>
+                            <tr>
+                                <td>2. 九巴 2022 年的事故率為每百萬行車公里 2.1 宗，低於同期整體行業平均值，服務安全。</td>
+                                <td class="text-center">一手資料和二手資料</td>
+                                <td class="text-center">分析及比較數據</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 用於生成 PDF/Word 的隱藏渲染區塊 (自動動態填充) -->
+    <div id="pdf-render-area" class="hidden bg-white text-black font-sans p-8 w-[800px] mx-auto">
+        <h1 class="text-3xl font-black text-center border-b-4 border-gray-800 pb-4 mb-6">專題研習：資料蒐集與分析報告</h1>
+        
+        <table class="w-full border-collapse border border-gray-800 mb-8 text-sm" style="border: 2px solid black;">
+            <tr>
+                <td style="border: 1px solid black; background-color: #f3f4f6; font-weight: bold; padding: 10px; width: 15%;">班級</td>
+                <td style="border: 1px solid black; padding: 10px; width: 35%; font-weight: bold;" id="pdf-class"></td>
+                <td style="border: 1px solid black; background-color: #f3f4f6; font-weight: bold; padding: 10px; width: 15%;">小組編號</td>
+                <td style="border: 1px solid black; padding: 10px; width: 35%; font-weight: bold;" id="pdf-group"></td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid black; background-color: #f3f4f6; font-weight: bold; padding: 10px;">學號</td>
+                <td style="border: 1px solid black; padding: 10px; font-weight: bold;" id="pdf-id"></td>
+                <td style="border: 1px solid black; background-color: #f3f4f6; font-weight: bold; padding: 10px;">姓名</td>
+                <td style="border: 1px solid black; padding: 10px; font-weight: bold;" id="pdf-name"></td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid black; background-color: #f3f4f6; font-weight: bold; padding: 10px;">專題題目</td>
+                <td style="border: 1px solid black; padding: 10px; font-weight: bold;" colspan="3" id="pdf-topic"></td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid black; background-color: #f3f4f6; font-weight: bold; padding: 10px;">論證目標</td>
+                <td style="border: 1px solid black; padding: 10px; font-weight: bold; color: #1e3a8a;" colspan="3" id="pdf-target"></td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid black; background-color: #f3f4f6; font-weight: bold; padding: 10px;">負責準則</td>
+                <td style="border: 1px solid black; padding: 10px; font-weight: bold; color: #1e3a8a;" colspan="3" id="pdf-subtopic"></td>
+            </tr>
+        </table>
+
+        <h3 class="font-black text-xl border-l-8 border-gray-800 pl-3 mb-3 mt-8 bg-gray-100 py-1">一、 資料蒐集過程</h3>
+        <p class="text-base mb-2 ml-3 font-bold">1. 使用 AI 平台：<span id="pdf-ai-platform" class="font-normal text-blue-700 ml-2"></span></p>
+        
+        <p class="text-base mb-2 mt-5 ml-3 font-bold">2. 從 AI 獲得的原始資料結構：</p>
+        <div id="pdf-data-ai" class="ml-3 mb-6 text-sm whitespace-pre-wrap leading-relaxed"></div>
+        
+        <p class="text-base mb-2 ml-3 font-bold">3. 經過篩選、整合和重新編寫的資料：</p>
+        <table class="w-full border-collapse mb-8 text-sm ml-3" style="border: 2px solid #666; width: 96%;">
+            <thead>
+                <tr style="background-color: #e5e7eb;">
+                    <th style="border: 1px solid #666; padding: 8px; font-size: 15px;">篩選整合資料</th>
+                    <th style="border: 1px solid #666; padding: 8px; font-size: 15px;">想證明甚麼？(論證目標)</th>
+                </tr>
+            </thead>
+            <tbody id="pdf-data-filtered"></tbody>
+        </table>
+        
+        <h3 class="font-black text-xl border-l-8 border-gray-800 pl-3 mb-3 mt-8 bg-gray-100 py-1">二、 鋪排論證結構</h3>
+        <p class="text-sm text-gray-600 mb-3 ml-3 font-bold">※ 結合第一手資料搜集及上述重整資料構建而成</p>
+        <table class="w-full border-collapse mb-6 text-sm ml-3" style="border: 2px solid #666; width: 96%;">
+            <thead>
+                <tr style="background-color: #e5e7eb;">
+                    <th style="border: 1px solid #666; padding: 8px; font-size: 15px;">論證方向 (次分論點)</th>
+                    <th style="border: 1px solid #666; padding: 8px; font-size: 15px;">論據</th>
+                    <th style="border: 1px solid #666; padding: 8px; font-size: 15px;">資料搜集方法</th>
+                    <th style="border: 1px solid #666; padding: 8px; font-size: 15px;">論證方法</th>
+                </tr>
+            </thead>
+            <tbody id="pdf-data-args"></tbody>
+        </table>
+        
+        <div class="mt-12 pt-6 border-t-2 border-gray-300 text-center">
+            <h3 class="font-bold text-lg mb-2">一、 AI 倫理規範聲明確認</h3>
+            <p class="text-sm font-bold text-gray-700">☑ 不依賴代寫，確保作品符合誠信。 &nbsp;&nbsp;&nbsp; ☑ 已核實 AI 提供的數據真實度與適切性。</p>
+        </div>
+    </div>
+
+    <!-- ===== JavaScript 核心邏輯 ===== -->
+    <script>
+        // ----------------- 核心資料庫 (根據9大範文深度定制引導問題，並加入全新學科題目) -----------------
+        const topicsList = [
+            { id: 't1', title: '香港名牌選舉', cat: '工商管理', opts: ['知名度', '經營特色', '創新意念', '品質形象', '環保及社會責任', '其他'],
+              guides: [
+                  {q: "你的開場白如何交代公司背景並展現參選自信？", ex: "【開場介紹】各位評委大家好。我們是...的代表，今天非常榮幸能代表公司角逐「香港名牌選舉」。本品牌自...年成立，一直致力於..."},
+                  {q: "你進行了哪些調查（如問卷、訪談、測試）來搜集第一手資料？中心論點是什麼？", ex: "為了客觀展示實力，我們團隊進行了深入的市場問卷調查、持份者訪談及實地測試。接下來，我們將從...證明品牌絕對符合要求。"},
+                  {q: "你的第一個次分論點是什麼？打算引用哪些權威認證或ESG報告(二手資料)？", ex: "首先，本品牌在[分論點]上表現卓越。根據《...報告》的公開資料顯示，我們已獲得...認證，客觀證明了把關嚴格。"},
+                  {q: "你的第二個次分論點是什麼？如何利用實地測試或真實故事(一手資料)增強說服力？", ex: "【數據論證】為了解大眾真實觀感，我們進行了問卷調查/實地測試。結果顯示，高達 92% 的受訪者表示...，這份信任是最佳背書。"},
+                  {q: "如何重申論點，並加上正面的承諾來總結呼籲？", ex: "【段落小結】由此可見，無論是嚴格標準還是廣大的信任，都印證了我們的卓越。懇請各位評委投我們神聖的一票。"}
+              ]
+            },
+            { id: 't2', title: '最佳幼稚園', cat: '幼兒教育', opts: ['照顧不同的學習需要', '有效的語文學與教', '運用資訊科技促進學習', '培養學生的正面價值觀和態度', '創意藝術或文化教育', '提倡健康的生活方式'],
+              guides: [
+                  {q: "你的開場白如何帶出學校的辦學宗旨與教育熱忱？", ex: "【開場介紹】各位評委大家好，我們帶著無比的熱誠來到這裡，代表...幼稚園角逐大獎。本校一直秉持「以幼兒為本」的理念..."},
+                  {q: "你搜集了哪些家長或課堂的第一手數據？", ex: "在準備報告的過程中，我們廣泛收集了校內家長的問卷調查、進行了深度訪談及課堂實地觀察。接下來我們將從..."},
+                  {q: "你的第一個次分論點是什麼？有何教育局指引或大學學術研究作為理論支持？", ex: "首先，參照教育局《幼稚園教育課程指引》/大學研究報告，本校採用的...教學法能具科學實證地顯著提升幼兒的..."},
+                  {q: "你的第二個次分論點是什麼？課堂觀察或家長問卷的具體反饋為何？", ex: "【數據論證】我們針對家長進行了問卷調查。數據顯示，高達 X% 的受訪家長認為駐校專業團隊能及早發現孩子...，大幅減輕了壓力。"},
+                  {q: "如何總結學校的教學效能，說服評委投票？", ex: "【段落小結】由此可見，無論是能力差異還是特殊需要，本校都能提供針對性支援，充分展現了卓越表現。懇請各位投我們一票。"}
+              ]
+            },
+            { id: 't3', title: '社區投資共享基金', cat: '社會服務', opts: ['社會網絡的建立', '凝聚社區力量', '互助和互惠', '社會凝聚和包容', '社會參與/公共事務的參與', '資訊和溝通'],
+              guides: [
+                  {q: "你代表哪個機構？申請的社區計劃名稱及解決的社區痛點是什麼？", ex: "【開場介紹】各位評委大家好，我們是...機構的項目主任。我們擬定的「...」計劃，旨在回應區內人口老化/基層家庭的挑戰..."},
+                  {q: "你進行了哪些地區先導測試或街坊調查？", ex: "我們走訪了區內多個屋邨，進行了街坊問卷調查、焦點小組訪談，並實地測試了先導活動。接下來我們將從..."},
+                  {q: "你的第一個次分論點是什麼？有何政府統計或社聯報告確立計劃的迫切性？", ex: "首先，本計劃能有效促進...。根據政府統計處數據顯示，區內...問題嚴重，這客觀確立了本計劃推行的迫切性。"},
+                  {q: "你的第二個次分論點是什麼？焦點小組的受助者真實心聲是什麼？", ex: "【真人故事】在焦點小組訪談中，照顧者陳太感動地分享，自從參加了我們的試驗茶聚後，她重新獲得了喘息和堅持下去的力量..."},
+                  {q: "如何總結計劃成效，懇求評委撥款？", ex: "【段落小結】從微觀的鄰里關顧到宏觀的合作，本計劃完美實踐了基金的宗旨。懇請評委批出撥款，與我們攜手提升社區向心力。"}
+              ]
+            },
+            { id: 't4', title: '香港設計大獎', cat: '設計學科', opts: ['市場需求', '作品特色', '創新性', '成效', '正面影響', '其他'],
+              guides: [
+                  {q: "你要推薦的參賽作品是什麼？開場白如何建立專業形象？", ex: "【開場介紹】各位評審委員大家好，我們是...工作室的代表。今天非常榮幸能為我們的最新空間設計作品「...」角逐大獎。"},
+                  {q: "你用了哪些方法(如3D模擬、實地量度)來驗證設計成效？", ex: "我們親自進行了人流模擬測試、溫度與光學實地量度，並收集了大量使用者問卷。接下來將緊扣...三大標準證明本項目的頂尖水準。"},
+                  {q: "你的第一個次分論點是什麼？有何專業設計指引或綠色建築標準支持？", ex: "首先，本作品展現了極高的...。根據古蹟辦指引/建造業議會數據，本項目採用了...，客觀證明其在設計上的突破。"},
+                  {q: "你的第二個次分論點是什麼？用家體驗的發現為何？", ex: "【先批評後稱讚(先踩後讚)】傳統設計往往忽略了...的需要。而我們實地觀察/訪問輪椅使用者發現，本作品首創的...完美解決了這個痛點。"},
+                  {q: "如何昇華設計的價值，爭取大獎？", ex: "【段落小結】綜合以上分析，本作品在...上展現了無與倫比的優勢與深遠的社會意義。懇請各位評委將殊榮頒予本項目。"}
+              ]
+            },
+            { id: 't5', title: '最佳旅遊景點', cat: '酒店及旅遊', opts: ['熱門景點', '自然景觀', '歷史/文化價值', '美食', '購物', '消閒遊樂', '相關配套', '其他(例如獨特性、環保元素等)'],
+              guides: [
+                  {q: "你要推薦哪個景點？開場白如何展現香港特色？", ex: "【開場介紹】各位評委大家好，我們非常榮幸能向各位推薦一個極具代表性的世界級地標「...」，角逐最佳旅遊景點。"},
+                  {q: "你進行了哪些旅客問卷或實地觀察？", ex: "我們團隊親自進行了實地觀察與設施測試，並結合了針對訪港旅客的街頭問卷及深度訪談。接下來我們將從..."},
+                  {q: "你的第一個次分論點是什麼？旅發局數據或年報如何支持其影響力？", ex: "首先，本景點具有無可比擬的...。根據旅發局/官方年報顯示，這裡每年吸引...人次，客觀證明了其深厚的文化/遊樂價值。"},
+                  {q: "你的第二個次分論點是什麼？你在實地觀察或訪問旅客時有何發現？", ex: "【數據論證】為了了解旅客評價，我們進行了問卷調查。結果顯示超過 90% 的受訪者將這裡評為...，並大讚其貼心的安排。"},
+                  {q: "如何總結景點優勢，呼籲評委印製推廣小冊子？", ex: "【段落小結】綜上所述，本景點完美展現了香港的獨特魅力，絕對值得作為優質旅遊體驗代表。懇請評委採納，向世界展示香港活力。"}
+              ]
+            },
+            { id: 't6', title: '最佳餐廳', cat: '酒店及旅遊', opts: ['食物質量', '烹調技巧', '環境', '服務', '其他(例如菜式的獨特性、創新性等)'],
+              guides: [
+                  {q: "你代表哪間食府？開場白如何帶出殿堂級氣勢？", ex: "【開場介紹】各位評委大家好，我們非常榮幸能向各位推薦一間蜚聲國際的殿堂級食府「...」，角逐最佳餐廳大獎。"},
+                  {q: "你進行了哪些隱秘試食或食客訪問？", ex: "我們在過去兩週進行了隱秘的實地試食與環境噪音測試，並針對不同國籍食客進行了問卷調查。接下來將從..."},
+                  {q: "你的第一個次分論點是什麼？米芝蓮或權威食評如何評價？", ex: "首先，本餐廳在...方面展現了無可挑剔的水準。根據《米芝蓮指南》的客觀評價，本餐廳獲得了最高肯定，證明其出品穩定。"},
+                  {q: "你的第二個次分論點是什麼？實地試食或環境測試的細節為何？", ex: "【數據論證】我們團隊親自進行了試食，發現其招牌鮑魚菜式的口感極為軟嫩，烹調火候精準。同時利用分貝計測試環境，結果顯示..."},
+                  {q: "如何總結餐廳的頂尖水準，爭取獎項？", ex: "【段落小結】由此可見，無論是國際獎項的客觀肯定，還是我們真實的試食體驗，都印證了其絕對優勢。懇請各位評委接納推薦。"}
+              ]
+            },
+            { id: 't7', title: '最佳商務宣傳推廣場地', cat: '工商管理', opts: ['場地設計', '設施及配套', '服務', '其他(地理位置/交通)'],
+              guides: [
+                  {q: "你要推薦哪個會展場地？開場白如何展現專業度？", ex: "【開場介紹】各位評委大家好，我們非常榮幸能代表團隊，提名「...」角逐亞洲最佳商務宣傳推廣場地殊榮。"},
+                  {q: "你用了哪些科學測試（如網速、計時）來搜集資料？", ex: "我們親身前往場地進行了實地考察與網路壓力測試，並針對海外參展商進行了問卷調查。接下來將從..."},
+                  {q: "你的第一個次分論點是什麼？官方的面積、樓底或承重數據有何優勢？", ex: "首先，本場地擁有極具標誌性的...。根據官方資料顯示，這裡提供高達...平方米的無柱空間，為國際級展覽提供了堅實基礎。"},
+                  {q: "你的第二個次分論點是什麼？科技測試或主辦方的評價如何？", ex: "【先批評後稱讚(先踩後讚)】傳統展館常面臨網路擁擠的痛點，但我們利用測速軟件實測發現，這裡的 5G 網絡在萬人流量下依然... 主辦方也高度讚賞..."},
+                  {q: "如何總結場地優勢，強調其最佳商務場地的地位？", ex: "【段落小結】無論是官方公佈的硬體規格，還是我們實證的設施表現，都印證了其亞洲頂尖商務場地的地位。懇請評委支持。"}
+              ]
+            },
+            { id: 't8', title: '最佳康樂文化設施', cat: '體育管理', opts: ['場地設計', '服務', '配套設施', '環保元素', '其他'],
+              guides: [
+                  {q: "你要推薦哪個文化/康樂設施？", ex: "【開場介紹】各位評委大家好，我們非常榮幸能代表團隊，提名「...」角逐最佳康樂文化設施大獎。"},
+                  {q: "你進行了哪些空間測量或訪客調查？", ex: "我們多次親身前往館內進行實地空間考察與環境指標測試，並收集了大量使用者反饋。接下來我們將從..."},
+                  {q: "你的第一個次分論點是什麼？綠色建築評級或官方設施數據如何支持？", ex: "首先，本設施完美融合了...。根據香港綠色建築議會/官方指南的數據，本設施成功獲得...認證，客觀證明了其高標準。"},
+                  {q: "你的第二個次分論點是什麼？無障礙體驗或實地溫度測試結果如何？", ex: "【真人故事】我們訪問了一位輪椅使用者/家庭客。他感動地表示，這裡寬闊的無障礙通道與貼心的育嬰設施，讓他能..."},
+                  {q: "如何總結設施的卓越之處，呼籲印製推廣小冊子？", ex: "【段落小結】由此可見，本設施處處以人為本，是香港優質生活質素的象徵。懇請各位評委接納推薦，讓其登上官方宣傳小冊子。"}
+              ]
+            },
+            { id: 't9', title: '社區體育會計劃', cat: '體育管理', opts: ['提升目標對象的個人特質', '所屬地區的場地能配合該項活動', '計劃全面及切實可行'],
+              guides: [
+                  {q: "你代表哪個體育會？申請的培訓計劃是什麼？", ex: "【開場介紹】各位評選委員大家好，我們是「...」體育會的幹事。今天正式提交青少年培訓計劃的申請，希望能獲得資助。"},
+                  {q: "你蒐集了哪些運動科學數據與實地測量資料？", ex: "我們深入研究了運動心理學文獻，在區內多個場地進行了實地測量，並收集了家長與教練的真實反饋。接下來將從..."},
+                  {q: "你的第一個次分論點是什麼？運動心理學研究或總會考核制度如何支持？", ex: "首先，這項運動能有效提升青少年的...。根據運動心理學期刊/大學研究指出，長期接受此訓練的學生，其面對挫折的恢復速度..."},
+                  {q: "你的第二個次分論點是什麼？實地場地測量或家長問卷有何發現？", ex: "【數據論證】為了確保場地配合度，我們親自進行了實地測試。測量結果證實其地板規格完全符合安全標準。家長問卷也顯示高達 90%..."},
+                  {q: "如何總結計劃的優勢，懇求評委批出資助？", ex: "【段落小結】總括而言，本計劃無論在提升特質還是資源調配上都絕對切實可行，能有效為社區培育苗子。懇請評委批出活動經費及場地資助。"}
+              ]
+            },
+            { id: 't10', title: '最佳度假酒店', cat: '酒店及旅遊', opts: ['客房佈置及設備', '員工態度及服務', '康樂設施及配套', '酒店環境', '其他'],
+              guides: [
+                  {q: "你代表哪間酒店？開場白如何展現奢華或舒適感？", ex: "【開場介紹】各位評委大家好，我們非常榮幸能代表「...」度假酒店，角逐最佳度假酒店的殊榮。我們致力於為旅客打造賓至如歸的完美體驗。"},
+                  {q: "你進行了哪些神秘客體驗或住客滿意度調查？", ex: "為了真實反映服務質素，我們安排了神秘客進行實地試住，並收集了過百份住客滿意度問卷。接下來我們將從..."},
+                  {q: "你的第一個次分論點是什麼？國際訂房網的評分或獎項如何支持？", ex: "首先，本酒店在...方面表現卓越。根據國際權威訂房平台(如Booking.com/Agoda)的公開數據，我們的客房設施評分高達..."},
+                  {q: "你的第二個次分論點是什麼？神秘客體驗的細節有何發現？", ex: "【數據論證】在神秘客的實地測試中，我們發現酒店員工在面對突發要求時，平均能在 5 分鐘內提供協助，服務態度極其..."},
+                  {q: "如何總結酒店的頂尖水準，爭取獎項？", ex: "【段落小結】由此可見，無論是硬體設施的奢華配置，還是軟體服務的無微不至，都印證了本酒店絕對具備得獎資格。懇請各位評委支持。"}
+              ]
+            },
+            { id: 't11', title: '優質建築大獎 (建築規劃及設計)', cat: '工程學科', opts: ['建築用地規劃', '美學、實用、創意設計', '室內視覺規劃', '科技和創新應用', '化解挑戰及限制', '其他'],
+              guides: [
+                  {q: "你要推薦的建築項目是什麼？開場白如何展現項目的宏大與創新？", ex: "【開場介紹】各位評委大家好，我們是...公司的代表。今天我們帶來了極具指標性的建築項目「...」，角逐優質建築大獎。"},
+                  {q: "你蒐集了哪些工程數據、施工報告或實地測量資料？", ex: "我們整合了施工期間的工程數據、BIM模型分析報告，並進行了實地的空間利用率測量。接下來我們將從...證明項目的卓越設計。"},
+                  {q: "你的第一個次分論點是什麼？有何建築圖則或業界標準支持？", ex: "首先，本項目在...方面展現了極高的專業度。根據工程圖則與政府法規數據顯示，項目成功克服了用地的地形限制，實現了..."},
+                  {q: "你的第二個次分論點是什麼？空間或視覺設計上有何突破？", ex: "【先稱讚後批評(先讚後踩)】傳統建築的空間規劃常被批評為壓迫感重，但本項目的室內視覺規劃透過巧妙的採光設計，做到了..."},
+                  {q: "如何總結建築的規劃成就，爭取大獎？", ex: "【段落小結】綜合上述的創新技術與設計巧思，本項目無疑是業界的典範，完全符合優質建築的要求。懇請各位評委予以肯定。"}
+              ]
+            },
+            { id: 't12', title: '優質建築大獎 (環保及可持續發展)', cat: '工程學科', opts: ['能源效益', '減廢', '室內環境質量', '綠化效益', '其他'],
+              guides: [
+                  {q: "你要推薦的建築項目是什麼？開場白如何強調其綠色使命？", ex: "【開場介紹】各位評委大家好，我們是...公司的代表。為響應全球減碳趨勢，我們在此提名「...」角逐環保及可持續發展大獎。"},
+                  {q: "你進行了哪些碳排放檢測或能源數據分析？", ex: "我們調閱了項目運營後的能源消耗數據、碳排放檢測報告，並實地測量了室內空氣質素。接下來將從..."},
+                  {q: "你的第一個次分論點是什麼？綠建環評 (BEAM Plus) 或官方數據如何支持？", ex: "首先，本建築具備頂尖的...。根據最新的綠建環評報告，本項目的能源效益評級達到最高的鉑金級，每年有效節省..."},
+                  {q: "你的第二個次分論點是什麼？實地環境檢測或綠化面積測算有何發現？", ex: "【數據論證】為了驗證減廢成效，我們分析了近半年的廢物管理數據。結果顯示，透過智能回收系統，整體廢棄物成功減少了 X%..."},
+                  {q: "如何總結綠色建築的貢獻，呼籲評委支持？", ex: "【段落小結】由此可見，本項目不僅大幅降低了環境負擔，更為未來建築樹立了可持續發展的標竿。懇請評委將大獎頒予本項目。"}
+              ]
+            },
+            { id: 't13', title: '優質建築大獎 (智慧建築)', cat: '工程學科', opts: ['建築規劃', '科技和創新應用', '安全、健康', '便利、舒適', '節能、資源整合及運用', '其他'],
+              guides: [
+                  {q: "你要推薦的智慧建築項目是什麼？開場白如何帶出科技感？", ex: "【開場介紹】各位評委大家好，我們是...的工程代表。今天我們帶來了結合物聯網與大數據的智慧地標「...」，角逐智慧建築大獎。"},
+                  {q: "你進行了哪些系統壓力測試或使用者科技體驗調查？", ex: "我們親自對大樓的智能管理系統進行了壓力測試，並針對大樓用戶進行了科技便利性的問卷調查。接下來我們將從..."},
+                  {q: "你的第一個次分論點是什麼？有何系統運作數據或自動化指標支持？", ex: "首先，本項目在科技創新上實現了...。根據中央控制系統的運作數據顯示，大樓已達到 90% 的自動化資源調配，客觀證明其智慧程度。"},
+                  {q: "你的第二個次分論點是什麼？用戶對便利或安全的真實反饋為何？", ex: "【先稱讚後批評(先讚後踩)】誠然，有人認為智慧系統容易故障，然而我們針對用戶的調查發現，本建築的安全監控網不僅穩定，更讓 95% 用戶感到..."},
+                  {q: "如何總結智慧建築的優勢，爭取評委認可？", ex: "【段落小結】無論是硬體的前瞻性還是軟體的整合度，本項目都完美演繹了智慧建築的真諦。懇請評委接納我們的推薦。"}
+              ]
+            },
+            { id: 't14', title: '優質建築大獎 (人性化建築)', cat: '工程學科', opts: ['關愛設計(通達、便利、安全)', '保育', '社會效益', '空間設計/運用', '其他'],
+              guides: [
+                  {q: "你要推薦的人性化建築是什麼？開場白如何展現以人為本的精神？", ex: "【開場介紹】各位評委大家好，我們是...公司的代表。建築不只是冰冷的水泥，更應充滿溫度。今天我們推薦「...」角逐人性化建築大獎。"},
+                  {q: "你進行了哪些無障礙實地測試或社區居民訪談？", ex: "我們走訪了該建築，親自進行了無障礙通道的輪椅實測，並深度訪談了周邊社區的居民。接下來我們將從..."},
+                  {q: "你的第一個次分論點是什麼？有何社區評估報告或保育文件支持？", ex: "首先，本建築在...方面展現了深厚的人文關懷。根據社區影響評估報告，本項目的公共空間成功促進了社區凝聚力，社會效益顯著。"},
+                  {q: "你的第二個次分論點是什麼？實地測試或居民訪談的細節為何？", ex: "【真人故事】我們訪問了一位長者使用者。他感動地表示，這裡無障礙的關愛設計與防滑細節，讓他能安心地在這裡享受休閒時光..."},
+                  {q: "如何總結人性化建築的社會價值，爭取大獎？", ex: "【段落小結】綜合以上論證，本項目處處體現了對不同族群的包容與關愛，是人性化建築的最佳典範。懇請各位評委投我們一票。"}
+              ]
+            },
+            { id: 't15', title: '香港工商業獎 (工業產品)', cat: '工程學科', opts: ['創新(如應用新技術)', '性能', '方便使用', '安全程度', '對環境之影響', '其他'],
+              guides: [
+                  {q: "你代表哪間公司？參賽的工業/通訊/環保等產品是什麼？", ex: "【開場介紹】各位評委大家好，我們是...公司的產品開發代表。今天我們帶來了最新研發的工業產品「...」，希望能奪得香港工商業獎。"},
+                  {q: "你進行了哪些實驗室檢測或工業效能實測？", ex: "我們在實驗室環境下進行了極限性能測試、安全檢測，並收集了首批企業用戶的實際操作反饋。接下來我們將從..."},
+                  {q: "你的第一個次分論點是什麼？有何國際認證或專業測試數據支持？", ex: "首先，本產品在效能上取得了重大突破。根據 ISO 國際檢測報告/實驗室客觀數據，本產品的性能指標超出行業平均水準達 X%..."},
+                  {q: "你的第二個次分論點是什麼？用戶操作測試或環保數據有何發現？", ex: "【數據論證】為了解介面的易用性，我們邀請了 50 位前線操作員進行測試。結果顯示，新技術讓操作時間縮短了 40%，大幅提升了方便程度。"},
+                  {q: "如何總結產品的工業價值，打開海內外市場？", ex: "【段落小結】由此可見，無論是核心技術的創新還是極致的安全性，本產品都具備進軍國際市場的絕對實力。懇請評委給予最高肯定。"}
+              ]
+            },
+            { id: 't16', title: '香港健康生活產業大奬', cat: '健康與生命學科', opts: ['市場表現', '社會價值', '功能/功效(與健康相關)', '創新', '可持續發展', '其他'],
+              guides: [
+                  {q: "你要推薦的健康產品或服務是什麼？開場白如何強調其對大眾健康的貢獻？", ex: "【開場介紹】各位評委大家好，我們是...公司的代表。隨著大眾對健康的重視，我們今天推薦「...」產品/服務，角逐健康生活產業大奬。"},
+                  {q: "你進行了哪些消費者健康數據追蹤或市場問卷調查？", ex: "我們整理了權威醫學期刊的資料，並對 500 位產品使用者進行了為期一個月的健康數據追蹤與滿意度問卷。接下來我們將從..."},
+                  {q: "你的第一個次分論點是什麼？有何臨床報告或市場銷售數據支持？", ex: "首先，本產品的健康功效具備科學實證。根據《...醫學期刊》及我們的第三方臨床檢測報告顯示，當中的活性成分能有效..."},
+                  {q: "你的第二個次分論點是什麼？消費者追蹤數據有何發現？", ex: "【數據論證】在我們的使用者追蹤調查中，高達 88% 的受訪者表示在使用一個月後，其睡眠質素/免疫力有顯著改善，這客觀證明了其市場價值。"},
+                  {q: "如何總結產品的健康價值，贏得評委認可？", ex: "【段落小結】綜合其科學實證的功效與極佳的市場反饋，本項目無疑為本地健康產業注入了新動力。懇請各位評委予以嘉許。"}
+              ]
+            },
+            { id: 't17', title: '最佳綠色生活空間', cat: '健康與生命學科', opts: ['[環保成效] 節能', '[環保成效] 廢物管理', '[環保成效] 改善環境質素', '[環保成效] 減少污染', '[環保成效] 可持續發展', '[環保成效] 其他', '環保設計'],
+              guides: [
+                  {q: "你要提名的本地綠色場所在哪裡？開場白如何帶出其環保特色？", ex: "【開場介紹】各位評委大家好，我們是環運會的事務助理。今天我們要向各位極力推薦「...」(如某公園/市政大樓)，角逐最佳綠色生活空間。"},
+                  {q: "你親自進行了哪些環境監測或綠色設施點算？", ex: "我們親身前往該場所進行了實地光害與噪音檢測，點算了各項節能設施，並訪問了日常使用的市民。接下來我們將從..."},
+                  {q: "你的第一個次分論點是什麼(如環保設計)？有何官方文件或建築規格支持？", ex: "首先，該場所在環保設計上獨樹一幟。根據官方規劃文件顯示，場所採用了頂尖的雨水收集系統及太陽能板，客觀證明其設計前瞻性。"},
+                  {q: "你的第二個次分論點是什麼(如廢物管理/節能成效)？實地調查或訪問有何發現？", ex: "【先稱讚後批評(先讚後踩)】誠然，有人認為大型場所難以落實廢物管理，然而我們實地調查發現，其廚餘回收機與分類系統不僅完善，市民參與度亦高達..."},
+                  {q: "如何總結場所的綠色典範作用，證明其值得獲獎？", ex: "【段落小結】由此可見，無論是卓越的環保設計還是實質的節能減廢成效，該場所都是香港綠色生活的絕佳示範。懇請評委支持我們的提名。"}
+              ]
+            },
+            { id: 't18', title: '有「營」食譜設計比賽', cat: '健康與生命學科', opts: ['營養價值', '賣相、口感及味道', '創意', '烹調方式或技巧', '其他'],
+              guides: [
+                  {q: "你代表的參賽餐廳設計了什麼「有營」餐單？", ex: "【開場介紹】各位評委大家好，我們是...餐廳的主廚團隊。為了推廣健康飲食，我們精心設計了這套名為「...」的特色有營餐單，正式提交參賽。"},
+                  {q: "你進行了哪些營養數據計算或食客試食評分調查？", ex: "我們不僅嚴格計算了各食材的營養成分比例，更邀請了不同年齡層的食客進行了盲測與試食評分。接下來我們將從..."},
+                  {q: "你的第一個次分論點是什麼？有何衛生署營養指引或科學數據支持？", ex: "首先，本餐單的營養價值完全符合最高標準。根據衛生署的《健康飲食指引》及我們的成分分析報告，這份套餐達到低鈉、低脂、高纖的要求..."},
+                  {q: "你的第二個次分論點是什麼？食客試食的真實反饋或口感測試結果為何？", ex: "【先批評後稱讚(先踩後讚)】傳統健康餐單常被詬病為淡而無味，但我們創新的烹調技巧打破了這點。在試食會中，90% 食客大讚其口感層次豐富..."},
+                  {q: "如何總結餐單的巧思，鼓勵市民選擇並爭取獎項？", ex: "【段落小結】總括而言，這份餐單完美平衡了健康指標與味蕾享受，絕對能有效鼓勵市民選擇有營菜式。懇請各位評委給予這份食譜最高榮譽。"}
+              ]
+            },
+            { id: 't19', title: '香港資訊及通訊科技獎', cat: '資訊科技學科', opts: ['創意', '功能', '市場潛力或公眾接受程度', '使用者可獲得的好處/影響', '質量', '其他(例如操作的難易度)'],
+              guides: [
+                  {q: "你要推薦的應用程式或發明是什麼？開場白如何展現科技潛力？", ex: "【開場介紹】各位評委大家好，我們是...公司的開發團隊。今天我們帶來了顛覆性的 IT 應用程式/解決方案「...」，角逐資訊及通訊科技大獎。"},
+                  {q: "你進行了哪些軟體壓力測試、Beta版公測或下載量數據分析？", ex: "我們整合了為期兩個月的 Beta 版公測數據、伺服器壓力測試報告，並對首批數千名活躍用戶進行了體驗調查。接下來我們將從..."},
+                  {q: "你的第一個次分論點是什麼？有何行業數據或系統效能報告支持？", ex: "首先，本發明在功能與質量上具備絕對優勢。根據系統壓力測試報告顯示，我們的演算法能在一秒內處理...，客觀證明其運算效能遠超同行。"},
+                  {q: "你的第二個次分論點是什麼？用戶公測的反饋或市場潛力調查為何？", ex: "【數據論證】為了解市場接受度，我們分析了公測期間的使用數據。結果顯示用戶留存率高達 75%，且九成受訪者表示該程式有效解決了他們...的痛點。"},
+                  {q: "如何總結該 IT 發明的影響力，拓展海內外商機？", ex: "【段落小結】由此可見，這項科技不僅具備極高的原創性，更帶來了實質的社會及商業價值。懇請評委頒予大獎，協助本港科技推向國際。"}
+              ]
+            }
+        ];
+
+        // --- 全域變數 ---
+        let currentTopicObj = null;
+        let currentSlideIdx = 1;
+        let argDirCount = 3; 
+        let slideDataStore = { 1:{}, 2:{}, 3:{}, 4:{}, 5:{} };
+        let slideImages = {}; 
+
+        // --- 初始化頁面 ---
+        window.onload = () => {
+            const grid = document.getElementById('topic-grid');
+            topicsList.forEach(t => {
+                const btn = document.createElement('button');
+                btn.className = "topic-btn bg-white border-2 border-blue-100 p-5 rounded-2xl hover:shadow-xl hover:border-blue-500 transition text-left group flex flex-col relative overflow-hidden";
+                btn.innerHTML = `
+                    <div class="absolute -right-4 -bottom-4 opacity-5 text-6xl font-black group-hover:scale-110 transition-transform">${t.title.substring(0,1)}</div>
+                    <span class="text-xs bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 px-3 py-1 rounded-full w-max mb-3 font-extrabold tracking-wide shadow-sm border border-blue-200">${t.cat}</span>
+                    <span class="text-lg font-black text-gray-800 group-hover:text-blue-700 leading-snug relative z-10">${t.title}</span>
+                `;
+                btn.onclick = () => {
+                    document.querySelectorAll("#topic-grid button").forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    currentTopicObj = t;
+                    
+                    const select = document.getElementById('stu-part');
+                    select.innerHTML = '<option value="">請選擇您負責的評審標準 / 分論點...</option>';
+                    t.opts.forEach(opt => select.innerHTML += `<option value="${opt}">${opt}</option>`);
+                    select.disabled = false;
+                    
+                    document.getElementById('ai-structure-hint').innerHTML = `💡 指示語參考：請向 AI 輸入「我們正在策劃一份關於『${t.title}』的報告，請針對『${t.opts[0]}』這個評審標準，提供 3 至 4 個能證明其優勢的具體論證方向。不用提供完整講稿，只需列出重點結構即可。」`;
+                };
+                grid.appendChild(btn);
+            });
+
+            // 初始化「篩選整合」6列左右對照表
+            const filteredList = document.getElementById('ai-filtered-list');
+            for(let i=1; i<=6; i++) {
+                filteredList.innerHTML += `
+                    <div class="flex flex-col md:flex-row gap-4 bg-white p-3 rounded-xl border border-blue-100 shadow-sm hover:shadow-md transition duration-200">
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold text-blue-800 mb-1 flex items-center gap-1"><span class="bg-blue-200 text-blue-800 w-4 h-4 rounded-full flex justify-center items-center text-[10px]">${i}</span> 篩選整合資料</label>
+                            <textarea id="filtered-data-${i}" class="data-table-input bg-blue-50/30 h-16 resize-none" placeholder="填入篩選及改寫後的客觀數據或資料..."></textarea>
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-xs font-black text-orange-600 mb-1">🎯 這份資料想證明甚麼？(論證目標)</label>
+                            <textarea id="filtered-proof-${i}" class="data-table-input bg-orange-50/30 border-orange-200 focus:border-orange-400 focus:ring-orange-400 h-16 resize-none" placeholder="例如：這能證明其設計極具環保價值..."></textarea>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 嘗試載入本機進度
+            loadProgress();
+        };
+
+        function goHome() { 
+            if(confirm("確定要返回首頁嗎？請確保已點擊右下角「儲存進度」按鈕！")) {
+                location.reload(); 
+            }
+        }
+
+        function openTableExample() {
+            document.getElementById('modal-a60').style.display = 'flex';
+        }
+
+        // 動態新增論證方向
+        function addArgDirection() {
+            argDirCount++;
+            const tbody = document.createElement('tbody');
+            tbody.id = `tbody-${argDirCount}`;
+            tbody.className = "border-b-4 border-emerald-100";
+            
+            // 隨機分配一個柔和的背景色
+            const colors = ['bg-purple-50/50', 'bg-pink-50/50', 'bg-yellow-50/50', 'bg-teal-50/50'];
+            const focusColors = ['focus:border-purple-500 focus:ring-purple-500', 'focus:border-pink-500 focus:ring-pink-500', 'focus:border-yellow-500 focus:ring-yellow-500', 'focus:border-teal-500 focus:ring-teal-500'];
+            const textColors = ['text-purple-900', 'text-pink-900', 'text-yellow-900', 'text-teal-900'];
+            const badgeColors = ['text-purple-400', 'text-pink-400', 'text-yellow-400', 'text-teal-400'];
+            
+            const colorIdx = (argDirCount - 4) % colors.length;
+            const bgClass = colors[colorIdx];
+            const focusClass = focusColors[colorIdx];
+            const txtClass = textColors[colorIdx];
+            const badgeClass = badgeColors[colorIdx];
+
+            tbody.innerHTML = `
+                <tr>
+                    <td rowspan="2" class="${bgClass} p-2 relative group">
+                        <textarea id="arg-dir-${argDirCount}" class="w-full h-full min-h-[90px] border-0 bg-transparent resize-none outline-none font-bold ${txtClass} text-center" placeholder="輸入次分論點 ${argDirCount} 方向..."></textarea>
+                        <button onclick="removeArgDirection(${argDirCount})" class="absolute top-1 right-1 text-red-500 bg-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 shadow transition hover:bg-red-500 hover:text-white" title="刪除此列">×</button>
+                    </td>
+                    <td class="p-2"><div class="flex gap-2"><span class="font-black ${badgeClass} mt-1">1.</span><textarea id="arg-ev-${argDirCount}-1" class="w-full border border-gray-200 rounded p-2 resize-none outline-none ${focusClass} focus:ring-1 h-16" placeholder="論據內容..."></textarea></div></td>
+                    <td class="p-2 align-middle">
+                        <select id="arg-src-${argDirCount}-1" class="w-full border border-gray-300 rounded p-2 outline-none ${focusClass} bg-gray-50">
+                            <option value="一手資料">一手資料</option><option value="二手資料">二手資料</option><option value="一手及二手資料">一手及二手</option>
+                        </select>
+                    </td>
+                    <td class="p-2 align-middle"><input type="text" id="arg-mth-${argDirCount}-1" class="w-full border border-gray-300 rounded p-2 outline-none ${focusClass} bg-gray-50" placeholder="例:問卷調查"></td>
+                </tr>
+                <tr>
+                    <td class="p-2 border-t border-gray-100"><div class="flex gap-2"><span class="font-black ${badgeClass} mt-1">2.</span><textarea id="arg-ev-${argDirCount}-2" class="w-full border border-gray-200 rounded p-2 resize-none outline-none ${focusClass} focus:ring-1 h-16" placeholder="論據內容..."></textarea></div></td>
+                    <td class="p-2 align-middle border-t border-gray-100">
+                        <select id="arg-src-${argDirCount}-2" class="w-full border border-gray-300 rounded p-2 outline-none ${focusClass} bg-gray-50">
+                            <option value="二手資料">二手資料</option><option value="一手資料">一手資料</option><option value="一手及二手資料">一手及二手</option>
+                        </select>
+                    </td>
+                    <td class="p-2 align-middle border-t border-gray-100"><input type="text" id="arg-mth-${argDirCount}-2" class="w-full border border-gray-300 rounded p-2 outline-none ${focusClass} bg-gray-50" placeholder="例:資料篩選及分析"></td>
+                </tr>
+            `;
+            document.getElementById('args-table-container').appendChild(tbody);
+            saveProgress();
+        }
+
+        function removeArgDirection(id) {
+            if(confirm("確定要刪除這列論證方向及其內容嗎？")) {
+                const tbody = document.getElementById(`tbody-${id}`);
+                if(tbody) {
+                    tbody.remove();
+                    saveProgress();
+                }
+            }
+        }
+
+        function enterWorkspace() {
+            if(!currentTopicObj) { alert("請先在步驟一選擇一個專題研習題目！"); return; }
+            const stuClass = document.getElementById('stu-class').value;
+            const stuGroup = document.getElementById('stu-group').value;
+            const stuName = document.getElementById('stu-name').value;
+            const stuTarget = document.getElementById('stu-target').value;
+            const stuPart = document.getElementById('stu-part').value;
+            
+            if(!stuClass || !stuGroup || !stuName || !stuTarget || !stuPart) {
+                alert("請完整填寫步驟二的學生基本資料及選擇分論點！"); return;
+            }
+
+            document.getElementById('view-home').classList.add('hidden');
+            document.getElementById('workspace-view').classList.remove('hidden');
+            
+            document.getElementById('ws-topic-title').innerText = currentTopicObj.title;
+            document.getElementById('ws-target-title').innerText = `論證目標對象：${stuTarget}`;
+            document.getElementById('ws-student-info').innerHTML = `<strong>${stuClass} 第${stuGroup}組</strong> | ${document.getElementById('stu-id').value} ${stuName} (負責: ${stuPart})`;
+
+            switchMainTab('part1');
+            buildSlideNav();
+            openSlide(1);
+            saveProgress(); // 進入時自動儲存一次
+        }
+
+        function switchMainTab(tab) {
+            const btn1 = document.getElementById('tab-part1');
+            const btn2 = document.getElementById('tab-part2');
+            const content1 = document.getElementById('content-part1');
+            const content2 = document.getElementById('content-part2');
+
+            if(tab === 'part1') {
+                content1.classList.remove('hidden');
+                content2.classList.add('hidden');
+                btn1.classList.add('active', 'text-blue-700', 'shadow-[0_-5px_15px_rgba(0,0,0,0.05)]', 'bg-white', 'border-t-2', 'border-l-2', 'border-r-2', 'border-gray-200');
+                btn1.classList.remove('text-gray-500', 'border-transparent', 'border-b-4');
+                btn2.classList.remove('active', 'text-blue-700', 'shadow-[0_-5px_15px_rgba(0,0,0,0.05)]', 'bg-white', 'border-t-2', 'border-l-2', 'border-r-2', 'border-gray-200');
+                btn2.classList.add('text-gray-500', 'border-transparent', 'border-b-4');
+            } else {
+                const aiChecked = document.querySelectorAll('input[name="ai-platform"]:checked');
+                if(aiChecked.length === 0) { alert("進入簡報製作前，請先選擇至少一個 AI 輔助平台！"); return; }
+                if(!document.getElementById('ethics-1').checked || !document.getElementById('ethics-2').checked) {
+                    alert("進入簡報製作前，請先閱讀並同意「真相核查員」聲明！"); return;
+                }
+                content1.classList.add('hidden');
+                content2.classList.remove('hidden');
+                btn2.classList.add('active', 'text-blue-700', 'shadow-[0_-5px_15px_rgba(0,0,0,0.05)]', 'bg-white', 'border-t-2', 'border-l-2', 'border-r-2', 'border-gray-200');
+                btn2.classList.remove('text-gray-500', 'border-transparent', 'border-b-4');
+                btn1.classList.remove('active', 'text-blue-700', 'shadow-[0_-5px_15px_rgba(0,0,0,0.05)]', 'bg-white', 'border-t-2', 'border-l-2', 'border-r-2', 'border-gray-200');
+                btn1.classList.add('text-gray-500', 'border-transparent', 'border-b-4');
+                updatePreview(); 
+            }
+            saveProgress();
+        }
+
+        function checkPart1AndGoPart2() { switchMainTab('part2'); }
+
+        // --- 本機儲存進度功能 (Local Storage) ---
+        function saveProgress() {
+            // 儲存表單資料
+            const inputIds = ['stu-class', 'stu-group', 'stu-id', 'stu-name', 'stu-target', 'stu-part'];
+            let formData = {};
+            inputIds.forEach(id => {
+                if(document.getElementById(id)) formData[id] = document.getElementById(id).value;
+            });
+            
+            // 儲存 AI 清單與表格
+            for(let i=1; i<=6; i++) {
+                if(document.getElementById(`ai-raw-${i}`)) formData[`ai-raw-${i}`] = document.getElementById(`ai-raw-${i}`).value;
+                if(document.getElementById(`filtered-data-${i}`)) formData[`filtered-data-${i}`] = document.getElementById(`filtered-data-${i}`).value;
+                if(document.getElementById(`filtered-proof-${i}`)) formData[`filtered-proof-${i}`] = document.getElementById(`filtered-proof-${i}`).value;
+            }
+
+            // 儲存動態論證表 (上限設為 15)
+            for(let i=1; i<=15; i++) {
+                if(document.getElementById(`arg-dir-${i}`)) {
+                    formData[`arg-dir-${i}`] = document.getElementById(`arg-dir-${i}`).value;
+                    for(let j=1; j<=2; j++) {
+                        formData[`arg-ev-${i}-${j}`] = document.getElementById(`arg-ev-${i}-${j}`).value;
+                        formData[`arg-src-${i}-${j}`] = document.getElementById(`arg-src-${i}-${j}`).value;
+                        formData[`arg-mth-${i}-${j}`] = document.getElementById(`arg-mth-${i}-${j}`).value;
+                    }
+                }
+            }
+
+            // 儲存幻燈片與圖片( Base64 )
+            saveCurrentSlide();
+            
+            const state = {
+                topicId: currentTopicObj ? currentTopicObj.id : null,
+                formData: formData,
+                slideDataStore: slideDataStore,
+                slideImages: slideImages,
+                argDirCount: argDirCount,
+                themeStyle: document.getElementById('theme-style-selector') ? document.getElementById('theme-style-selector').value : 'theme-office',
+                themeColor: document.getElementById('theme-color') ? document.getElementById('theme-color').value : '#283593',
+                timestamp: new Date().getTime()
+            };
+            
+            localStorage.setItem('ppt_platform_save', JSON.stringify(state));
+            
+            // 提示動畫
+            const btn = document.querySelector('.floating-save-btn');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = `<span class="text-2xl">✅</span> 已儲存`;
+            btn.style.background = "linear-gradient(135deg, #3b82f6, #2563eb)";
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.style.background = "linear-gradient(135deg, #10b981, #059669)";
+            }, 2000);
+        }
+
+        function loadProgress() {
+            const saved = localStorage.getItem('ppt_platform_save');
+            if(saved) {
+                try {
+                    const state = JSON.parse(saved);
+                    
+                    // 恢復主題
+                    if(state.topicId) {
+                        const targetTopic = topicsList.find(t => t.id === state.topicId);
+                        if(targetTopic) {
+                            // 模擬點擊
+                            document.querySelectorAll("#topic-grid button").forEach(b => {
+                                if(b.innerHTML.includes(targetTopic.title)) b.click();
+                            });
+                        }
+                    }
+                    
+                    // 恢復動態表格
+                    while(argDirCount < state.argDirCount) { addArgDirection(false); }
+
+                    // 恢復表單資料
+                    Object.keys(state.formData).forEach(key => {
+                        const el = document.getElementById(key);
+                        if(el) el.value = state.formData[key];
+                    });
+
+                    // 恢復 Slide 資料
+                    if(state.slideDataStore) slideDataStore = state.slideDataStore;
+                    if(state.slideImages) slideImages = state.slideImages;
+                    
+                    if(state.themeStyle && document.getElementById('theme-style-selector')) document.getElementById('theme-style-selector').value = state.themeStyle;
+                    if(state.themeColor && document.getElementById('theme-color')) document.getElementById('theme-color').value = state.themeColor;
+                    
+                } catch(e) {
+                    console.error("載入進度失敗", e);
+                }
+            }
+        }
+
+        // --- 即時預覽與風格更新邏輯 ---
+        function updateUITheme() {
+            const previewContainer = document.getElementById('ppt-preview-container');
+            const style = document.getElementById('theme-style-selector').value;
+            const color = document.getElementById('theme-color').value;
+
+            // 清除舊樣式，加入新樣式
+            previewContainer.className = "slide-container " + style;
+            
+            // 處理顯示屏標題顏色 
+            const previewTitle = document.getElementById('ppt-title');
+            previewTitle.style.color = color;
+            previewTitle.style.borderBottomColor = color;
+            
+            if(style === 'theme-tech' || style === 'theme-construction' || style === 'theme-industrial') {
+                previewTitle.style.color = '#ffffff';
+                previewTitle.style.backgroundColor = color;
+            } else {
+                previewTitle.style.backgroundColor = 'transparent';
+            }
+
+            // 更新編輯區標題提示顏色
+            document.getElementById('slide-title-display').style.color = color;
+            
+            updatePreview();
+            saveProgress();
+        }
+
+        function updatePreview() {
+            // 更新即時顯示屏文字
+            document.getElementById('ppt-title').innerText = document.getElementById('slide-title-input').value || '標題預覽';
+            document.getElementById('ppt-text').innerText = document.getElementById('slide-content').value || '內容預覽...';
+            
+            // 處理排版位置
+            const wrapper = document.getElementById('ppt-body-wrapper');
+            const pos = document.getElementById('img-position').value;
+            const previewImg = document.getElementById('ppt-img');
+            
+            if(slideImages[currentSlideIdx]) {
+                previewImg.src = slideImages[currentSlideIdx];
+                previewImg.style.display = 'block';
+                if(pos === 'left') { wrapper.style.flexDirection = 'row-reverse'; }
+                else if(pos === 'right') { wrapper.style.flexDirection = 'row'; }
+                else if(pos === 'top') { wrapper.style.flexDirection = 'column-reverse'; }
+                else if(pos === 'bottom') { wrapper.style.flexDirection = 'column'; }
+            } else {
+                previewImg.src = "";
+                previewImg.style.display = 'none';
+                wrapper.style.flexDirection = 'row';
+            }
+        }
+
+        // --- 簡報編輯器邏輯 ---
+        const slideTitles = ["第一頁：封面及開場白", "第二頁：調查概要及分論點", "第三頁：次分論點及論據 (一)", "第四頁：次分論點及論據 (二)", "第五頁：段落小結"];
+
+        function buildSlideNav() {
+            const nav = document.getElementById('slide-nav-list');
+            nav.innerHTML = '';
+            for(let i=1; i<=5; i++) {
+                let btn = document.createElement('button');
+                btn.className = "flex-shrink-0 px-5 py-2 text-sm font-bold text-gray-500 border-2 border-transparent rounded-full hover:bg-blue-50 transition";
+                btn.innerText = `第 ${i} 頁`;
+                // 這裡修復了導航欄點擊的綁定問題
+                btn.onclick = () => openSlide(i);
+                btn.id = `nav-btn-${i}`;
+                nav.appendChild(btn);
+            }
+        }
+
+        function openSlide(num) {
+            saveCurrentSlide();
+            currentSlideIdx = num;
+
+            document.querySelectorAll('#slide-nav-list button').forEach(b => {
+                b.classList.remove('bg-blue-600', 'text-white', 'shadow-md');
+                b.classList.add('text-gray-500');
+            });
+            const activeBtn = document.getElementById(`nav-btn-${num}`);
+            if(activeBtn) {
+                activeBtn.classList.add('bg-blue-600', 'text-white', 'shadow-md');
+                activeBtn.classList.remove('text-gray-500');
+            }
+
+            document.getElementById('slide-title-display').innerText = slideTitles[num-1];
+
+            // 智能載入該科目的專屬引導
+            let guide = currentTopicObj.guides[num-1];
+            document.getElementById('slide-q').innerHTML = `<span class="text-xl">🤔</span> <b>思考問題：</b><br>${guide.q}`;
+            document.getElementById('slide-ex').innerHTML = `<span class="text-lg">💡</span> <b>輔助例句：</b><br>${guide.ex}`;
+
+            // 恢復儲存的資料
+            let data = slideDataStore[num] || {};
+            document.getElementById('slide-title-input').value = data.title || "";
+            document.getElementById('slide-content').value = data.text || "";
+            document.getElementById('img-position').value = data.imgPos || "right";
+            document.getElementById('sentence-template').value = "";
+
+            const removeBtn = document.getElementById('remove-img-btn');
+            
+            if(slideImages[num]) {
+                removeBtn.classList.remove('hidden');
+            } else {
+                removeBtn.classList.add('hidden');
+            }
+            document.getElementById('slide-img-input').value = "";
+            updateUITheme(); // 觸發一次更新以套用顏色與文字
+        }
+
+        function saveCurrentSlide() {
+            let title = document.getElementById('slide-title-input') ? document.getElementById('slide-title-input').value : "";
+            let text = document.getElementById('slide-content') ? document.getElementById('slide-content').value : "";
+            let imgPos = document.getElementById('img-position') ? document.getElementById('img-position').value : "right";
+            slideDataStore[currentSlideIdx] = { title, text, imgPos };
+        }
+
+        function applyTemplate() {
+            let tmpl = document.getElementById('sentence-template').value;
+            if(!tmpl) return;
+            let textArea = document.getElementById('slide-content');
+            let currentText = textArea.value;
+            if(currentText && !currentText.endsWith('\n')) currentText += '\n';
+
+            let addText = "";
+            // 加入擴充詞彙修正與格式填寫
+            if(tmpl === "開場介紹") addText = "【開場介紹】各位評委大家好，本集團成立逾_____年。我們是...今天向各位證明...";
+            if(tmpl === "先讚後踩") addText = "【先稱讚後批評(先讚後踩)(駁論)】誠然，有人認為...，然而我們實地調查/親身測試發現，本項目突破了局限，做到了...";
+            if(tmpl === "先踩後讚") addText = "【先批評後稱讚(先踩後讚)(對比)】以往的設計/服務經常被詬病為...，但我們觀察到本項目打破常規，成功做到...";
+            if(tmpl === "數據論證") addText = "【數據論證】為了客觀證明，我們進行了調查/測試。數據顯示，高達 X% 的受訪者表示...";
+            if(tmpl === "段落小結") addText = "【段落小結】由此可見，以上論據確切印證了卓越的表現。接下來交給...";
+            
+            textArea.value = currentText + addText;
+            document.getElementById('sentence-template').value = "";
+            updatePreview();
+            saveProgress();
+        }
+
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    slideImages[currentSlideIdx] = e.target.result;
+                    document.getElementById('remove-img-btn').classList.remove('hidden');
+                    updatePreview();
+                    saveProgress();
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removeImage(event) {
+            event.stopPropagation(); 
+            delete slideImages[currentSlideIdx];
+            document.getElementById('remove-img-btn').classList.add('hidden');
+            document.getElementById('slide-img-input').value = "";
+            updatePreview();
+            saveProgress();
+        }
+
+        // --- 匯出功能 (PDF / WORD / PPTX) ---
+        function getFileName(suffix) {
+            const cls = document.getElementById('stu-class').value || '班級';
+            const grp = document.getElementById('stu-group').value || '組別';
+            const name = document.getElementById('stu-name').value || '姓名';
+            return `${cls}_第${grp}組_${name}_${suffix}`.replace(/[\/\\:*?"<>|]/g, '-');
+        }
+
+        function syncExportData() {
+            // 基本資料
+            document.getElementById('pdf-class').innerText = document.getElementById('stu-class').value;
+            document.getElementById('pdf-group').innerText = document.getElementById('stu-group').value;
+            document.getElementById('pdf-id').innerText = document.getElementById('stu-id').value;
+            document.getElementById('pdf-name').innerText = document.getElementById('stu-name').value;
+            document.getElementById('pdf-topic').innerText = currentTopicObj.title;
+            document.getElementById('pdf-target').innerText = document.getElementById('stu-target').value;
+            document.getElementById('pdf-subtopic').innerText = document.getElementById('stu-part').value;
+            
+            // AI 平台與列表 1-6
+            const aiChecked = Array.from(document.querySelectorAll('input[name="ai-platform"]:checked')).map(el => el.value);
+            document.getElementById('pdf-ai-platform').innerText = aiChecked.join(', ') || '未選擇';
+            
+            let rawList = "";
+            for(let i=1; i<=6; i++) {
+                let v = document.getElementById(`ai-raw-${i}`).value;
+                if(v) rawList += `${i}. ${v}\n`;
+            }
+            document.getElementById('pdf-data-ai').innerText = rawList || '未填寫';
+            
+            // 篩選整合對照表
+            let filteredListHTML = "";
+            for(let i=1; i<=6; i++) {
+                let data = document.getElementById(`filtered-data-${i}`).value;
+                let proof = document.getElementById(`filtered-proof-${i}`).value;
+                if(data || proof) {
+                    filteredListHTML += `<tr>
+                        <td style="border: 1px solid #666; padding: 8px;">${data}</td>
+                        <td style="border: 1px solid #666; padding: 8px; color:#1e3a8a; font-weight:bold;">${proof}</td>
+                    </tr>`;
+                }
+            }
+            document.getElementById('pdf-data-filtered').innerHTML = filteredListHTML || '<tr><td colspan="2" style="border: 1px solid #ccc; padding: 8px; text-align:center;">未填寫</td></tr>';
+            
+            // 論證結構表 (動態抓取所有生成的 tbody)
+            let argsListHTML = "";
+            for(let i=1; i<=argDirCount; i++) {
+                let dirElem = document.getElementById(`arg-dir-${i}`);
+                if(!dirElem) continue; // 處理被刪除的列
+                
+                let dir = dirElem.value;
+                for(let j=1; j<=2; j++) {
+                    let ev = document.getElementById(`arg-ev-${i}-${j}`).value;
+                    let src = document.getElementById(`arg-src-${i}-${j}`).value;
+                    let mth = document.getElementById(`arg-mth-${i}-${j}`).value;
+                    
+                    if(dir || ev || mth) {
+                        argsListHTML += `<tr>`;
+                        if(j===1) argsListHTML += `<td rowspan="2" style="border: 1px solid #666; padding: 8px; font-weight:bold; text-align:center; background:#f9fafb;">${dir}</td>`;
+                        argsListHTML += `
+                            <td style="border: 1px solid #666; padding: 8px;">${j}. ${ev}</td>
+                            <td style="border: 1px solid #666; padding: 8px; text-align:center;">${src}</td>
+                            <td style="border: 1px solid #666; padding: 8px; text-align:center;">${mth}</td>
+                        </tr>`;
+                    }
+                }
+            }
+            document.getElementById('pdf-data-args').innerHTML = argsListHTML || '<tr><td colspan="4" style="border: 1px solid #666; padding: 8px; text-align:center;">未填寫</td></tr>';
+        }
+
+        function exportPDF() {
+            saveProgress();
+            syncExportData();
+            const el = document.getElementById('pdf-render-area');
+            el.classList.remove('hidden');
+            el.classList.add('block');
+            
+            const opt = {
+                margin:       0.5,
+                filename:     getFileName('資料蒐集報告') + '.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+            
+            html2pdf().set(opt).from(el).save().then(() => {
+                el.classList.remove('block');
+                el.classList.add('hidden');
+            });
+        }
+
+        function exportWord() {
+            saveProgress();
+            syncExportData();
+            const el = document.getElementById('pdf-render-area');
+            el.classList.remove('hidden');
+            el.classList.add('block');
+            
+            const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>報告</title></head><body>";
+            const footer = "</body></html>";
+            const sourceHTML = header + el.innerHTML + footer;
+            
+            const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+            const fileDownload = document.createElement("a");
+            document.body.appendChild(fileDownload);
+            fileDownload.href = source;
+            fileDownload.download = getFileName('資料蒐集報告') + '.doc';
+            fileDownload.click();
+            document.body.removeChild(fileDownload);
+            
+            el.classList.remove('block');
+            el.classList.add('hidden');
+        }
+
+        function exportPPTX() {
+            saveProgress();
+            let pptx = new PptxGenJS();
+            pptx.layout = 'LAYOUT_16x9';
+            
+            const fontFace = 'Microsoft JhengHei';
+            const userColorHex = document.getElementById('theme-color').value.replace('#', '');
+            const style = document.getElementById('theme-style-selector').value;
+            
+            // 決定 PPT 背景色
+            let bgColor = "FFFFFF";
+            if(style === 'theme-tech') bgColor = "1a1a2e";
+            if(style === 'theme-fashion') bgColor = "111827";
+            if(style === 'theme-construction') bgColor = "fdfbf7";
+            
+            const isDark = (bgColor === "1a1a2e" || bgColor === "111827");
+            const fontColor = isDark ? "FFFFFF" : "333333";
+
+            // 建立母片
+            pptx.defineSlideMaster({
+                title: "MASTER_SLIDE",
+                background: { color: bgColor },
+                objects: [
+                    { rect: { x: 0, y: 0, w: "100%", h: 0.6, fill: { color: userColorHex } } },
+                    { text: { text: `專題研習口頭報告 - ${currentTopicObj.title}`, options: { x: 0.2, y: 0.1, w: 8, h: 0.4, color: "FFFFFF", fontFace: fontFace, fontSize: 14 } } }
+                ]
+            });
+
+            // 處理 5 頁簡報
+            for(let i=1; i<=5; i++) {
+                let data = slideDataStore[i] || {};
+                let slide = pptx.addSlide({ masterName: "MASTER_SLIDE" });
+                
+                let titleText = data.title || slideTitles[i-1];
+                let titleColor = (style === 'theme-tech' || style === 'theme-construction' || style === 'theme-industrial') ? "FFFFFF" : userColorHex;
+                let titleFill = (style === 'theme-tech' || style === 'theme-construction' || style === 'theme-industrial') ? userColorHex : null;
+
+                let titleOpts = { x: 0.5, y: 0.8, w: 9, h: 0.6, fontSize: 26, bold: true, color: titleColor, fontFace: fontFace };
+                if (titleFill) titleOpts.fill = { color: titleFill };
+                slide.addText(titleText, titleOpts);
+                
+                let rawText = data.text || "";
+                
+                // 第一頁自動補入學生資料
+                if(i === 1) {
+                    let headerInfo = `目標對象：${document.getElementById('stu-target').value}\n負責分論點：${document.getElementById('stu-part').value}\n\n【報告者資訊】\n班級：${document.getElementById('stu-class').value} 第${document.getElementById('stu-group').value}組\n姓名：${document.getElementById('stu-id').value} ${document.getElementById('stu-name').value}\n\n`;
+                    rawText = headerInfo + rawText;
+                }
+
+                let textOpts = { 
+                    x: 0.5, y: 1.6, w: 9.0, h: 3.6, 
+                    fontSize: 18, color: fontColor, fontFace: fontFace, valign: "top", bullet: true
+                };
+                let imgOpts = null;
+
+                // 圖片排版計算 (sizing: 'contain' 自動縮放不變形)
+                if (slideImages[i]) {
+                    if (data.imgPos === "right") {
+                        textOpts.w = 4.5;
+                        imgOpts = { data: slideImages[i], x: 5.2, y: 1.6, w: 4.3, h: 3.6, sizing: { type: "contain" } };
+                    } else if (data.imgPos === "left") {
+                        textOpts.x = 5.2; textOpts.w = 4.5;
+                        imgOpts = { data: slideImages[i], x: 0.5, y: 1.6, w: 4.5, h: 3.6, sizing: { type: "contain" } };
+                    } else if (data.imgPos === "bottom") {
+                        textOpts.h = 1.5; textOpts.fontSize = 16;
+                        imgOpts = { data: slideImages[i], x: 2.0, y: 3.2, w: 6.0, h: 2.0, sizing: { type: "contain" } };
+                    } else if (data.imgPos === "top") {
+                        textOpts.y = 3.6; textOpts.h = 1.6; textOpts.fontSize = 16;
+                        imgOpts = { data: slideImages[i], x: 2.0, y: 1.5, w: 6.0, h: 2.0, sizing: { type: "contain" } };
+                    }
+                }
+
+                // 處理換行轉成點列式 (bullet)
+                let textArr = rawText.split('\n').filter(t => t.trim() !== '').map(t => ({ text: t, options: { breakLine: true, bullet: t.trim().startsWith('•') } }));
+                if(textArr.length === 0) textArr = [{ text: "（學生未填寫內容草稿）" }];
+                
+                slide.addText(textArr, textOpts);
+                if(imgOpts) slide.addImage(imgOpts);
+            }
+
+            pptx.writeFile({ fileName: getFileName('口頭報告初稿') + '.pptx' });
+        }
+    </script>
+</body>
+</html>
