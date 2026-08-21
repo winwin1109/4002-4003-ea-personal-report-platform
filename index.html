@@ -9,9 +9,11 @@
     <!-- PptxGenJS -->
     <script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/libs/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.min.js"></script>
-    <!-- html2pdf -->
+    <!-- html2pdf.js (新增：用於匯出 PDF) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    
+    <!-- 補上這行標準 jsPDF 獨立庫，確保全域讀取正常 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
     <style>
         /* 色彩與動感背景 */
         body { 
@@ -39,13 +41,13 @@
         .workspace { display: flex; gap: 24px; align-items: stretch; min-height: 650px; flex-direction: column; }
         @media (min-width: 1024px) { .workspace { flex-direction: row; } }
         .editor-panel { flex: 1.2; overflow-y: auto; background: rgba(255,255,255,0.95); padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; backdrop-filter: blur(10px); }
-        .preview-panel { flex: 1; overflow-y: auto; background: #f8fafc; padding: 25px; border-radius: 16px; box-shadow: inset 0 2px 15px rgba(0,0,0,0.05), 0 10px 30px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; position: sticky; top: 80px; height: calc(100vh - 100px); }
+        .preview-panel { flex: 1; overflow-y: auto; overflow-x: auto; background: #f8fafc; padding: 25px; border-radius: 16px; box-shadow: inset 0 2px 15px rgba(0,0,0,0.05), 0 10px 30px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; position: sticky; top: 80px; height: calc(100vh - 100px); }
         
-        /* 簡報顯示屏樣式 */
-        .slide-container { width: 100%; aspect-ratio: 16 / 9; position: relative; padding: 5%; box-sizing: border-box; display: flex; flex-direction: column; transition: all 0.5s ease; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); overflow: hidden; background-size: cover; background-position: center; }
-        .slide-title { font-size: clamp(18px, 3.5vw, 28px); font-weight: 900; margin-bottom: 4%; padding-bottom: 2%; flex-shrink: 0; z-index: 2; position: relative; transition: color 0.3s ease; }
+        /* 簡報顯示屏樣式 (固定為 960x540 真實比例大小) */
+        .slide-container { width: 960px; height: 540px; min-width: 960px; position: relative; padding: 5%; box-sizing: border-box; display: flex; flex-direction: column; transition: all 0.5s ease; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); overflow: hidden; background-size: cover; background-position: center; margin: 0 auto; }
+        .slide-title { font-size: 28px; font-weight: 900; margin-bottom: 4%; padding-bottom: 2%; flex-shrink: 0; z-index: 2; position: relative; transition: color 0.3s ease; }
         .slide-body-wrapper { display: flex; flex: 1; gap: 20px; overflow: hidden; z-index: 2; position: relative; }
-        .slide-content { font-size: clamp(13px, 2vw, 18px); line-height: 1.7; white-space: pre-wrap; flex: 1; overflow-y: auto; transition: color 0.3s ease; }
+        .slide-content { font-size: 18px; line-height: 1.7; white-space: pre-wrap; flex: 1; overflow-y: auto; transition: color 0.3s ease; }
         .slide-uploaded-img { max-width: 48%; max-height: 100%; object-fit: contain; border-radius: 8px; box-shadow: 0 8px 16px rgba(0,0,0,0.15); display: none; flex-shrink: 0; z-index: 2; position: relative; }
 
         /* 輸入框與表格色彩強化 */
@@ -249,6 +251,10 @@
                     <p class="text-sm text-gray-500 mb-5 font-medium">小組內請分工使用不同平台，點擊「前往」可直接開新視窗。</p>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div class="flex items-center justify-between bg-white p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
+                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700"><input type="checkbox" name="ai-platform" value="DeepSeek" class="w-5 h-5 accent-blue-600"><span>DeepSeek</span></label>
+                            <a href="https://chat.deepseek.com/" target="_blank" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-bold border border-blue-200">🔗 前往</a>
+                        </div>
+                        <div class="flex items-center justify-between bg-white p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
                             <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700"><input type="checkbox" name="ai-platform" value="VTC GenAI" class="w-5 h-5 accent-blue-600"><span>VTC GenAI</span></label>
                             <a href="https://genai.vtc.edu.hk/" target="_blank" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-bold border border-blue-200">🔗 前往</a>
                         </div>
@@ -270,10 +276,20 @@
                         </div>
                         <div class="flex items-center justify-between bg-white p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
                             <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700"><input type="checkbox" name="ai-platform" value="Grok" class="w-5 h-5 accent-blue-600"><span>Grok</span></label>
-                            <a href="https://grok.x.ai/" target="_blank" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-bold border border-blue-200">🔗 前往</a>
+                            <a href="https://grok.com/" target="_blank" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-bold border border-blue-200">🔗 前往</a>
+                        </div>
+                        <div class="flex items-center justify-between bg-white p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
+                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700"><input type="checkbox" name="ai-platform" value="Poe" class="w-5 h-5 accent-blue-600"><span>Poe</span></label>
+                            <a href="https://poe.com/" target="_blank" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-bold border border-blue-200">🔗 前往</a>
                         </div>
                     </div>
                 </div>
+
+                <div class="mt-4">
+                        <button onclick="openAIHelperModal()" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-indigo-700 transition transform hover:-translate-y-1 flex justify-center items-center gap-2">
+                            <span>🤖</span> 啟動「AI 學習夥伴」教學
+                        </button>
+                    </div>
 
                 <!-- 倫理聲明 -->
                 <div class="bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-300 p-6 rounded-2xl shadow-md relative overflow-hidden">
@@ -328,7 +344,19 @@
                     </button>
                 </div>
                 
-                <p class="text-sm text-emerald-800 mb-5 font-medium bg-white/60 p-3 rounded-lg border border-white">請將上述重整後的資料，結合您親自搜集的調查，填入以下表格構建論據。如有需要，可點擊下方按鈕新增論證方向。</p>
+                <div class="bg-yellow-50 border-l-8 border-yellow-500 p-5 mb-6 shadow-md rounded-r-xl">
+                    <h4 class="text-xl font-black text-red-600 mb-2 flex items-center gap-2">
+                        <span class="text-2xl">⚠️</span> 重點提示：
+                    </h4>
+                    <p class="text-lg font-bold text-gray-800 leading-relaxed">
+                        <span class="text-red-600 text-xl">請將上述重整後的資料，結合你親自搜集的調查，填入以下表格構建論據。</span><br>
+                        <span class="text-sm text-gray-600 mt-2 block">（從 AI 找資料只是一小部分，必須加入自己調查的<span class="text-blue-700 underline">第一手論據</span>，才能讓論證具有真實說服力！）</span>
+                    </p>
+                </div>
+
+                <p class="text-sm text-red-600 mt-2 mb-2 font-bold bg-red-50 p-3 rounded-lg border border-red-200 shadow-sm flex items-center gap-2">
+                    <span class="text-xl">📌</span> 備註：如沒有次分論點，可只填寫分論點和提供第一手資料及第二手資料。
+                </p>
                 
                 <div class="overflow-x-auto rounded-xl border border-emerald-200 shadow-sm">
                     <table class="data-table w-full bg-white text-sm" id="args-table-container">
@@ -340,49 +368,7 @@
                                 <th width="20%" class="py-3">論證方法</th>
                             </tr>
                         </thead>
-                        <!-- 預設生成 2 個 Direction，多出的可用新增按鈕加 -->
-                        <tbody class="border-b-4 border-emerald-100">
-                            <tr>
-                                <td rowspan="2" class="bg-blue-50/50 p-2"><textarea id="arg-dir-1" class="w-full h-full min-h-[90px] border-0 bg-transparent resize-none outline-none font-bold text-blue-900 text-center" placeholder="輸入次分論點一方向..."></textarea></td>
-                                <td class="p-2"><div class="flex gap-2"><span class="font-black text-blue-300 mt-1">1.</span><textarea id="arg-ev-1-1" class="w-full border border-gray-200 rounded p-2 resize-none outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 h-16" placeholder="論據內容..."></textarea></div></td>
-                                <td class="p-2 align-middle">
-                                    <select id="arg-src-1-1" class="w-full border border-gray-300 rounded p-2 outline-none focus:border-blue-500 bg-gray-50">
-                                        <option value="一手資料">一手資料</option><option value="二手資料">二手資料</option><option value="一手及二手資料">一手及二手</option>
-                                    </select>
-                                </td>
-                                <td class="p-2 align-middle"><input type="text" id="arg-mth-1-1" class="w-full border border-gray-300 rounded p-2 outline-none focus:border-blue-500 bg-gray-50" placeholder="例:引用數據"></td>
-                            </tr>
-                            <tr>
-                                <td class="p-2 border-t border-gray-100"><div class="flex gap-2"><span class="font-black text-blue-300 mt-1">2.</span><textarea id="arg-ev-1-2" class="w-full border border-gray-200 rounded p-2 resize-none outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 h-16" placeholder="論據內容..."></textarea></div></td>
-                                <td class="p-2 align-middle border-t border-gray-100">
-                                    <select id="arg-src-1-2" class="w-full border border-gray-300 rounded p-2 outline-none focus:border-blue-500 bg-gray-50">
-                                        <option value="二手資料">二手資料</option><option value="一手資料">一手資料</option><option value="一手及二手資料">一手及二手</option>
-                                    </select>
-                                </td>
-                                <td class="p-2 align-middle border-t border-gray-100"><input type="text" id="arg-mth-1-2" class="w-full border border-gray-300 rounded p-2 outline-none focus:border-blue-500 bg-gray-50" placeholder="例:實地觀察分析"></td>
-                            </tr>
-                        </tbody>
-                        <tbody id="tbody-2">
-                            <tr>
-                                <td rowspan="2" class="bg-orange-50/50 p-2"><textarea id="arg-dir-2" class="w-full h-full min-h-[90px] border-0 bg-transparent resize-none outline-none font-bold text-orange-900 text-center" placeholder="輸入次分論點二方向..."></textarea></td>
-                                <td class="p-2"><div class="flex gap-2"><span class="font-black text-orange-300 mt-1">1.</span><textarea id="arg-ev-2-1" class="w-full border border-gray-200 rounded p-2 resize-none outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 h-16" placeholder="論據內容..."></textarea></div></td>
-                                <td class="p-2 align-middle">
-                                    <select id="arg-src-2-1" class="w-full border border-gray-300 rounded p-2 outline-none focus:border-orange-500 bg-gray-50">
-                                        <option value="一手資料">一手資料</option><option value="二手資料">二手資料</option><option value="一手及二手資料">一手及二手</option>
-                                    </select>
-                                </td>
-                                <td class="p-2 align-middle"><input type="text" id="arg-mth-2-1" class="w-full border border-gray-300 rounded p-2 outline-none focus:border-orange-500 bg-gray-50" placeholder="例:問卷調查"></td>
-                            </tr>
-                            <tr>
-                                <td class="p-2 border-t border-gray-100"><div class="flex gap-2"><span class="font-black text-orange-300 mt-1">2.</span><textarea id="arg-ev-2-2" class="w-full border border-gray-200 rounded p-2 resize-none outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 h-16" placeholder="論據內容..."></textarea></div></td>
-                                <td class="p-2 align-middle border-t border-gray-100">
-                                    <select id="arg-src-2-2" class="w-full border border-gray-300 rounded p-2 outline-none focus:border-orange-500 bg-gray-50">
-                                        <option value="二手資料">二手資料</option><option value="一手資料">一手資料</option><option value="一手及二手資料">一手及二手</option>
-                                    </select>
-                                </td>
-                                <td class="p-2 align-middle border-t border-gray-100"><input type="text" id="arg-mth-2-2" class="w-full border border-gray-300 rounded p-2 outline-none focus:border-orange-500 bg-gray-50" placeholder="例:資料篩選及分析"></td>
-                            </tr>
-                        </tbody>
+                        <!-- 預設生成，透過 JS 初始化 -->
                     </table>
                 </div>
                 <div class="mt-4 text-center">
@@ -395,8 +381,7 @@
             <!-- 第一部分匯出按鈕 -->
             <div class="mt-10 flex flex-col md:flex-row justify-between items-center border-t-2 border-gray-200 pt-6 gap-4">
                 <div class="flex gap-4 w-full md:w-auto">
-                    <button onclick="exportWord()" class="flex-1 md:flex-none bg-blue-600 text-white px-8 py-4 rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-xl flex justify-center items-center transition font-bold text-lg"><span class="text-2xl mr-2">📝</span> 下載 Word 報告</button>
-                    <button onclick="exportPDF()" class="flex-1 md:flex-none bg-gray-800 text-white px-8 py-4 rounded-xl shadow-lg hover:bg-gray-900 hover:shadow-xl flex justify-center items-center transition font-bold text-lg"><span class="text-2xl mr-2">📄</span> 下載 PDF 報告</button>
+                    <button onclick="exportWord()" class="flex-1 md:flex-none w-full bg-blue-600 text-white px-8 py-4 rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-xl flex justify-center items-center transition font-bold text-lg"><span class="text-2xl mr-2">📝</span> 下載 Word 報告</button>
                 </div>
                 <button onclick="checkPart1AndGoPart2()" class="w-full md:w-auto bg-gradient-to-r from-green-500 to-emerald-600 text-white px-12 py-4 rounded-xl font-black shadow-xl hover:from-green-600 hover:to-emerald-700 text-xl transition transform hover:-translate-y-1">
                     進入簡報視覺製作 ➔
@@ -413,7 +398,7 @@
                     <p class="text-sm text-gray-700">想知道如何將每位同學做好的簡報無縫接合？點擊右側按鈕查看完整教學。</p>
                 </div>
                 <a href="https://winwin1109.github.io/4002-4003-ppt-combine-platform/" target="_blank" class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:from-blue-700 hover:to-indigo-700 transition transform hover:-translate-y-1 flex items-center gap-2">
-                    <span>📑</span> 觀看組件小組簡報教學
+                    <span>📑</span> 點擊觀看簡報教學、建構完整小組簡報
                 </a>
             </div>
 
@@ -427,9 +412,14 @@
                     </div>
 
                     <!-- 提示資訊區 (在簡報設計外) -->
-                    <div class="bg-yellow-50/90 border border-yellow-300 p-5 mb-6 rounded-xl shadow-sm">
+                    <div class="bg-yellow-50/90 border border-yellow-300 p-5 mb-3 rounded-xl shadow-sm">
                         <p id="slide-q" class="font-bold text-yellow-900 mb-2 text-[15px] flex items-start gap-2"><span class="text-lg">🤔</span> <span>思考問題：</span></p>
                         <p id="slide-ex" class="text-blue-800 text-[14.5px] whitespace-pre-line leading-relaxed italic font-medium mt-3 bg-white/60 p-3 rounded border border-yellow-200">💡 輔助例句：</p>
+                    </div>
+
+                    <!-- 動態顯示的溫馨備註 -->
+                    <div id="slide-warm-note" class="hidden bg-emerald-50 border border-emerald-300 p-4 mb-6 rounded-xl shadow-sm text-sm text-emerald-800 font-bold flex items-center gap-2">
+                        <span class="text-xl">💡</span> <span>溫馨備註：若內容包含「次分論點」，建議參考示範簡報的做法，直接將其精要地標示於相應的論據頁面上，這將幫助觀眾更清晰地掌握您的邏輯脈絡。</span>
                     </div>
 
                     <!-- 編輯表單 -->
@@ -489,7 +479,7 @@
                         </div>
                     </div>
 
-                    <!-- 即時預覽容器 -->
+                    <!-- 即時預覽容器 (標準 960x540 比例大小) -->
                     <div id="ppt-preview-container" class="slide-container theme-office">
                         <div id="ppt-title" class="slide-title">標題預覽</div>
                         <div class="slide-body-wrapper" id="ppt-body-wrapper">
@@ -500,11 +490,11 @@
 
                     <!-- 匯出按鈕 -->
                     <div class="mt-auto w-full pt-8 flex gap-4">
-                         <button onclick="exportSlidePDF()" class="flex-1 bg-gradient-to-r from-gray-700 to-gray-900 text-white py-4 rounded-xl font-black shadow-xl hover:from-gray-800 hover:to-black transition flex items-center justify-center transform hover:scale-105 text-lg">
-                            <span class="text-2xl mr-2">📄</span> 匯出此頁為 PDF
+                        <button onclick="exportPPTX()" class="flex-1 bg-gradient-to-r from-orange-400 to-red-500 text-white py-4 rounded-xl font-black shadow-xl hover:from-orange-500 hover:to-red-600 transition flex items-center justify-center transform hover:scale-105 text-lg">
+                            <span class="text-2xl mr-2">📥</span> 匯出 PPTX
                         </button>
-                        <button onclick="exportPPTX()" class="flex-2 bg-gradient-to-r from-orange-400 to-red-500 text-white py-4 px-6 rounded-xl font-black shadow-xl hover:from-orange-500 hover:to-red-600 transition flex items-center justify-center transform hover:scale-105 text-lg">
-                            <span class="text-2xl mr-2">📥</span> 匯出整份簡報 (PPTX)
+                        <button onclick="exportPDF()" class="flex-1 bg-gradient-to-r from-pink-500 to-rose-600 text-white py-4 rounded-xl font-black shadow-xl hover:from-pink-600 hover:to-rose-700 transition flex items-center justify-center transform hover:scale-105 text-lg">
+                            <span class="text-2xl mr-2">📄</span> 匯出 PDF
                         </button>
                     </div>
                      <p class="text-xs text-gray-500 mt-3 text-center font-medium">系統將自動以等比例縮放相片，確保排版完美不變形。</p>
@@ -514,20 +504,11 @@
         </div>
     </div>
 
-    <!-- 用於匯出 PDF 的隱藏渲染區塊 -->
-    <div id="slide-pdf-render-area" class="hidden slide-container w-[1024px] h-[576px]" style="padding: 5%; box-sizing: border-box; display: flex; flex-direction: column; background-size: cover; background-position: center; border: none; box-shadow: none;">
-        <div id="pdf-slide-title" class="slide-title" style="font-size: 28px; font-weight: 900; margin-bottom: 4%; padding-bottom: 2%; flex-shrink: 0; z-index: 2; position: relative;">標題</div>
-        <div id="pdf-slide-body-wrapper" class="slide-body-wrapper" style="display: flex; flex: 1; gap: 20px; overflow: hidden; z-index: 2; position: relative;">
-             <div id="pdf-slide-text" class="slide-content" style="font-size: 18px; line-height: 1.7; white-space: pre-wrap; flex: 1;">內容</div>
-             <img id="pdf-slide-img" class="slide-uploaded-img" src="" alt="" style="max-width: 48%; max-height: 100%; object-fit: contain; border-radius: 8px; display: none; flex-shrink: 0; z-index: 2; position: relative;">
-        </div>
-    </div>
-
-    <!-- 隱藏的 A60/A61 範例彈出視窗 (全 HTML 設計) -->
+    <!-- 隱藏的 鋪排論證結構示範 彈出視窗 -->
     <div id="modal-a60" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-content">
             <span class="modal-close" onclick="document.getElementById('modal-a60').style.display='none'">&times;</span>
-            <h2 class="text-2xl font-black text-blue-900 mb-6 border-b-2 border-blue-200 pb-3 flex items-center gap-2"><span>📋</span> 鋪排論證結構示範 (參考 A60 / A61)</h2>
+            <h2 class="text-2xl font-black text-blue-900 mb-6 border-b-2 border-blue-200 pb-3 flex items-center gap-2"><span>📋</span> 鋪排論證結構示範</h2>
             
             <div class="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-inner">
                 <!-- 頂部流程圖 -->
@@ -653,8 +634,8 @@
         </div>
     </div>
 
-    <!-- 用於生成 PDF/Word 的隱藏渲染區塊 (自動動態填充) -->
-    <div id="pdf-render-area" class="hidden bg-white text-black font-sans p-8 w-[800px] mx-auto">
+    <!-- 用於生成 PDF 的隱藏渲染區塊 (採用頂層固定技術確保不空白) -->
+    <div id="pdf-render-area" class="bg-white text-black font-sans p-8 w-[800px] mx-auto hidden">
         <h1 class="text-3xl font-black text-center border-b-4 border-gray-800 pb-4 mb-6">專題研習：資料蒐集與分析報告</h1>
         
         <table class="w-full border-collapse border border-gray-800 mb-8 text-sm" style="border: 2px solid black;">
@@ -785,7 +766,7 @@
                   {q: "如何總結餐廳的頂尖水準，爭取獎項？", ex: "【分論點總結】由此可見，無論是客觀評價還是真實體驗，都印證了其在...方面的絕對優勢。"}
               ]
             },
-            { id: 't7', title: '最佳商務宣傳推廣場地', cat: '工商管理', opts: ['場地設計', '設施及配套', '服務', '其他(地理位置/交通)'],
+            { id: 't7', title: '最佳商務宣傳推廣場地', cat: '酒店及旅遊', opts: ['場地設計', '設施及配套', '服務', '其他(地理位置/交通)'],
               guides: [
                   {q: "你負責分析場地的哪一項優勢？", ex: "【指出分論點】各位評委，現在讓我來詳細說明這個場地在「...」方面的卓越表現。"},
                   {q: "第一個論據，你用了哪些科學測試（如網速、計時）來搜集資料？", ex: "【論據一】我們親身前往場地進行了網路壓力測試，實測發現..."},
@@ -920,7 +901,8 @@
         // --- 全域變數 ---
         let currentTopicObj = null;
         let currentSlideIdx = 1;
-        let argDirCount = 3; 
+        let argDirCount = 2; 
+        let evCount = { 1: 2, 2: 2 }; // 記錄每個方向(次分論點)擁有多少個論據列
         let slideDataStore = { 1:{}, 2:{}, 3:{}, 4:{}, 5:{} };
         let slideImages = {}; 
         let totalSlides = 5; // 預設 5 頁：分論點, 論據1, 論據2, 論據3, 總結
@@ -946,7 +928,7 @@
                     t.opts.forEach(opt => select.innerHTML += `<option value="${opt}">${opt}</option>`);
                     select.disabled = false;
                     
-                    document.getElementById('ai-structure-hint').innerHTML = `💡 指示語參考：請向 AI 輸入「我們正在策劃一份關於『${t.title}』的報告，請針對『${t.opts[0]}』這個評審標準，提供 3 至 4 個能證明其優勢的具體論證方向。不用提供完整講稿，只需列出重點結構即可。」`;
+                    document.getElementById('ai-structure-hint').innerHTML = `💡 指示語參考：請向 AI 輸入「我們正在策劃一份關於『${t.title}』的報告，請針對......(論證目標對象)在『${t.opts[0]}』這個評審標準，提供 3 至 4 個能證明其優勢的具體論證方向。」`;
                 };
                 grid.appendChild(btn);
             });
@@ -982,51 +964,83 @@
             document.getElementById('modal-a60').style.display = 'flex';
         }
 
-        // 動態新增論證方向 (第一部分表格)
-        function addArgDirection() {
+        // 動態生成論據列 HTML (第一部分表格)
+        function createEvidenceRowHTML(dirId, evIdx) {
+             const badgeColors = ['text-blue-300', 'text-orange-300', 'text-purple-400', 'text-pink-400', 'text-yellow-400', 'text-teal-400'];
+             const focusColors = ['focus:border-blue-500', 'focus:border-orange-500', 'focus:border-purple-500', 'focus:border-pink-500', 'focus:border-yellow-500', 'focus:border-teal-500'];
+             let cIdx = (dirId - 1) % 6;
+             let badgeClass = badgeColors[cIdx];
+             let focusClass = focusColors[cIdx];
+
+             let tr = document.createElement('tr');
+             tr.id = `tr-ev-${dirId}-${evIdx}`;
+             tr.innerHTML = `
+                 <td class="p-2 border-t border-gray-100"><div class="flex gap-2"><span class="font-black ${badgeClass} mt-1">${evIdx}.</span><textarea id="arg-ev-${dirId}-${evIdx}" class="w-full border border-gray-200 rounded p-2 resize-none outline-none ${focusClass} focus:ring-1 h-16" placeholder="論據內容..."></textarea></div></td>
+                 <td class="p-2 align-middle border-t border-gray-100">
+                     <select id="arg-src-${dirId}-${evIdx}" class="w-full border border-gray-300 rounded p-2 outline-none ${focusClass} bg-gray-50">
+                         <option value="二手資料">二手資料</option><option value="一手資料">一手資料</option><option value="一手及二手資料">一手及二手</option>
+                     </select>
+                 </td>
+                 <td class="p-2 align-middle border-t border-gray-100"><input type="text" id="arg-mth-${dirId}-${evIdx}" class="w-full border border-gray-300 rounded p-2 outline-none ${focusClass} bg-gray-50" placeholder="例:資料篩選及分析"></td>
+             `;
+             return tr;
+        }
+
+        // 為某個次分論點動態增加一個新的論據列
+        function addEvidenceRow(dirId, skipIncrement = false) {
+            if(!evCount[dirId]) evCount[dirId] = 2;
+            if(!skipIncrement) { evCount[dirId]++; }
+            
+            let evIdx = skipIncrement ? document.querySelectorAll(`[id^='tr-ev-${dirId}-']`).length + 1 : evCount[dirId];
+            let tbody = document.getElementById(`tbody-${dirId}`);
+            let tdDir = document.getElementById(`td-dir-${dirId}`);
+            if(tdDir) tdDir.rowSpan = evIdx; // 更新大標題跨越的行數
+            
+            tbody.appendChild(createEvidenceRowHTML(dirId, evIdx));
+            if(!skipIncrement) saveProgress();
+        }
+
+        // 動態新增一整個論證方向大區塊
+        function addArgDirection(skipDefaultRows = false) {
             argDirCount++;
+            if(!evCount[argDirCount]) evCount[argDirCount] = 2;
+            
             const tbody = document.createElement('tbody');
             tbody.id = `tbody-${argDirCount}`;
             tbody.className = "border-b-4 border-emerald-100";
             
-            // 隨機分配一個柔和的背景色
-            const colors = ['bg-purple-50/50', 'bg-pink-50/50', 'bg-yellow-50/50', 'bg-teal-50/50'];
-            const focusColors = ['focus:border-purple-500 focus:ring-purple-500', 'focus:border-pink-500 focus:ring-pink-500', 'focus:border-yellow-500 focus:ring-yellow-500', 'focus:border-teal-500 focus:ring-teal-500'];
-            const textColors = ['text-purple-900', 'text-pink-900', 'text-yellow-900', 'text-teal-900'];
-            const badgeColors = ['text-purple-400', 'text-pink-400', 'text-yellow-400', 'text-teal-400'];
+            const colors = ['bg-blue-50/50', 'bg-orange-50/50', 'bg-purple-50/50', 'bg-pink-50/50', 'bg-yellow-50/50', 'bg-teal-50/50'];
+            const textColors = ['text-blue-900', 'text-orange-900', 'text-purple-900', 'text-pink-900', 'text-yellow-900', 'text-teal-900'];
             
-            const colorIdx = (argDirCount - 4) % colors.length;
+            const colorIdx = (argDirCount - 1) % colors.length;
             const bgClass = colors[colorIdx];
-            const focusClass = focusColors[colorIdx];
             const txtClass = textColors[colorIdx];
-            const badgeClass = badgeColors[colorIdx];
 
-            tbody.innerHTML = `
-                <tr>
-                    <td rowspan="2" class="${bgClass} p-2 relative group">
-                        <textarea id="arg-dir-${argDirCount}" class="w-full h-full min-h-[90px] border-0 bg-transparent resize-none outline-none font-bold ${txtClass} text-center" placeholder="輸入次分論點 ${argDirCount} 方向..."></textarea>
-                        <button onclick="removeArgDirection(${argDirCount})" class="absolute top-1 right-1 text-red-500 bg-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 shadow transition hover:bg-red-500 hover:text-white" title="刪除此列">×</button>
-                    </td>
-                    <td class="p-2"><div class="flex gap-2"><span class="font-black ${badgeClass} mt-1">1.</span><textarea id="arg-ev-${argDirCount}-1" class="w-full border border-gray-200 rounded p-2 resize-none outline-none ${focusClass} focus:ring-1 h-16" placeholder="論據內容..."></textarea></div></td>
-                    <td class="p-2 align-middle">
-                        <select id="arg-src-${argDirCount}-1" class="w-full border border-gray-300 rounded p-2 outline-none ${focusClass} bg-gray-50">
-                            <option value="一手資料">一手資料</option><option value="二手資料">二手資料</option><option value="一手及二手資料">一手及二手</option>
-                        </select>
-                    </td>
-                    <td class="p-2 align-middle"><input type="text" id="arg-mth-${argDirCount}-1" class="w-full border border-gray-300 rounded p-2 outline-none ${focusClass} bg-gray-50" placeholder="例:問卷調查"></td>
-                </tr>
-                <tr>
-                    <td class="p-2 border-t border-gray-100"><div class="flex gap-2"><span class="font-black ${badgeClass} mt-1">2.</span><textarea id="arg-ev-${argDirCount}-2" class="w-full border border-gray-200 rounded p-2 resize-none outline-none ${focusClass} focus:ring-1 h-16" placeholder="論據內容..."></textarea></div></td>
-                    <td class="p-2 align-middle border-t border-gray-100">
-                        <select id="arg-src-${argDirCount}-2" class="w-full border border-gray-300 rounded p-2 outline-none ${focusClass} bg-gray-50">
-                            <option value="二手資料">二手資料</option><option value="一手資料">一手資料</option><option value="一手及二手資料">一手及二手</option>
-                        </select>
-                    </td>
-                    <td class="p-2 align-middle border-t border-gray-100"><input type="text" id="arg-mth-${argDirCount}-2" class="w-full border border-gray-300 rounded p-2 outline-none ${focusClass} bg-gray-50" placeholder="例:資料篩選及分析"></td>
-                </tr>
+            let countToCreate = skipDefaultRows ? evCount[argDirCount] : 2;
+
+            // 建立首行 (含合併的論證方向框)
+            let tr1 = document.createElement('tr');
+            tr1.id = `tr-ev-${argDirCount}-1`;
+            tr1.innerHTML = `
+                <td id="td-dir-${argDirCount}" rowspan="${countToCreate}" class="${bgClass} p-2 relative group">
+                    <textarea id="arg-dir-${argDirCount}" class="w-full h-full min-h-[90px] border-0 bg-transparent resize-none outline-none font-bold ${txtClass} text-center" placeholder="輸入次分論點 ${argDirCount} 方向..."></textarea>
+                    <button onclick="addEvidenceRow(${argDirCount})" class="absolute bottom-2 right-2 text-emerald-600 font-bold bg-white border border-emerald-200 rounded-lg text-xs px-2 py-1 shadow hover:bg-emerald-50 transition">+ 論據</button>
+                    <button onclick="removeArgDirection(${argDirCount})" class="absolute top-1 right-1 text-red-500 bg-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 shadow transition hover:bg-red-500 hover:text-white" title="刪除此列">×</button>
+                </td>
             `;
+            // 加入第一個論據的內容 (復用 createEvidenceRowHTML 並提取裡面的 td)
+            let row1HTML = createEvidenceRowHTML(argDirCount, 1).innerHTML;
+            tr1.innerHTML += row1HTML;
+            tbody.appendChild(tr1);
+            
             document.getElementById('args-table-container').appendChild(tbody);
-            saveProgress();
+
+            // 建立後續預設行
+            for(let j=2; j<=countToCreate; j++) {
+                tbody.appendChild(createEvidenceRowHTML(argDirCount, j));
+            }
+            
+            if(!skipDefaultRows) saveProgress();
         }
 
         function removeArgDirection(id) {
@@ -1051,6 +1065,9 @@
                 alert("請完整填寫步驟二的學生基本資料及選擇分論點！"); return;
             }
 
+            // 更新指示語的論證目標代入，並保留學生可自行填寫的空白位
+            document.getElementById('ai-structure-hint').innerHTML = `💡 指示語參考：請向 AI 輸入「我們正在策劃一份關於『${currentTopicObj.title}』的報告，請針對......(論證目標對象)在『${stuPart}』這個評審標準，提供 3 至 4 個能證明其優勢的具體論證方向。」`;
+
             document.getElementById('view-home').classList.add('hidden');
             document.getElementById('workspace-view').classList.remove('hidden');
             
@@ -1061,7 +1078,7 @@
             switchMainTab('part1');
             buildSlideNav();
             openSlide(1);
-            saveProgress(); // 進入時自動儲存一次
+            saveProgress(); 
         }
 
         function switchMainTab(tab) {
@@ -1096,35 +1113,34 @@
 
         function checkPart1AndGoPart2() { switchMainTab('part2'); }
 
-        // --- 本機儲存進度功能 (Local Storage) ---
+        // --- 本機儲存進度功能 ---
         function saveProgress() {
-            // 儲存表單資料
             const inputIds = ['stu-class', 'stu-group', 'stu-id', 'stu-name', 'stu-target', 'stu-part'];
             let formData = {};
             inputIds.forEach(id => {
                 if(document.getElementById(id)) formData[id] = document.getElementById(id).value;
             });
             
-            // 儲存 AI 清單與表格
             for(let i=1; i<=6; i++) {
                 if(document.getElementById(`ai-raw-${i}`)) formData[`ai-raw-${i}`] = document.getElementById(`ai-raw-${i}`).value;
                 if(document.getElementById(`filtered-data-${i}`)) formData[`filtered-data-${i}`] = document.getElementById(`filtered-data-${i}`).value;
                 if(document.getElementById(`filtered-proof-${i}`)) formData[`filtered-proof-${i}`] = document.getElementById(`filtered-proof-${i}`).value;
             }
 
-            // 儲存動態論證表 (上限設為 15)
-            for(let i=1; i<=15; i++) {
+            for(let i=1; i<=argDirCount; i++) {
                 if(document.getElementById(`arg-dir-${i}`)) {
                     formData[`arg-dir-${i}`] = document.getElementById(`arg-dir-${i}`).value;
-                    for(let j=1; j<=2; j++) {
-                        formData[`arg-ev-${i}-${j}`] = document.getElementById(`arg-ev-${i}-${j}`).value;
-                        formData[`arg-src-${i}-${j}`] = document.getElementById(`arg-src-${i}-${j}`).value;
-                        formData[`arg-mth-${i}-${j}`] = document.getElementById(`arg-mth-${i}-${j}`).value;
+                    let count = evCount[i] || 2;
+                    for(let j=1; j<=count; j++) {
+                        if(document.getElementById(`arg-ev-${i}-${j}`)) {
+                            formData[`arg-ev-${i}-${j}`] = document.getElementById(`arg-ev-${i}-${j}`).value;
+                            formData[`arg-src-${i}-${j}`] = document.getElementById(`arg-src-${i}-${j}`).value;
+                            formData[`arg-mth-${i}-${j}`] = document.getElementById(`arg-mth-${i}-${j}`).value;
+                        }
                     }
                 }
             }
 
-            // 儲存幻燈片與圖片( Base64 )
             saveCurrentSlide();
             
             const state = {
@@ -1133,6 +1149,7 @@
                 slideDataStore: slideDataStore,
                 slideImages: slideImages,
                 argDirCount: argDirCount,
+                evCount: evCount,
                 totalSlides: totalSlides,
                 themeStyle: document.getElementById('theme-style-selector') ? document.getElementById('theme-style-selector').value : 'theme-office',
                 themeColor: document.getElementById('theme-color') ? document.getElementById('theme-color').value : '#283593',
@@ -1141,7 +1158,6 @@
             
             localStorage.setItem('ppt_platform_save', JSON.stringify(state));
             
-            // 提示動畫
             const btn = document.querySelector('.floating-save-btn');
             const originalHTML = btn.innerHTML;
             btn.innerHTML = `<span class="text-2xl">✅</span> 已儲存`;
@@ -1158,30 +1174,44 @@
                 try {
                     const state = JSON.parse(saved);
                     
-                    // 恢復主題
                     if(state.topicId) {
                         const targetTopic = topicsList.find(t => t.id === state.topicId);
                         if(targetTopic) {
-                            // 模擬點擊
                             document.querySelectorAll("#topic-grid button").forEach(b => {
                                 if(b.innerHTML.includes(targetTopic.title)) b.click();
                             });
                         }
                     }
                     
-                    // 恢復動態表格
-                    while(argDirCount < state.argDirCount) { addArgDirection(false); }
+                    // 恢復動態表格架構
+                    argDirCount = 0;
+                    document.getElementById('args-table-container').innerHTML = `
+                        <thead>
+                            <tr class="bg-emerald-600 text-white">
+                                <th width="22%" class="py-3">論證方向 (次分論點)</th>
+                                <th width="38%" class="py-3">論據</th>
+                                <th width="20%" class="py-3">資料搜集方法</th>
+                                <th width="20%" class="py-3">論證方法</th>
+                            </tr>
+                        </thead>
+                    `;
+                    
+                    if(state.evCount) { evCount = state.evCount; } 
+                    else { evCount = {1: 2, 2: 2}; }
 
-                    // 恢復表單資料
+                    let loadedDirCount = state.argDirCount || 2;
+                    for(let i=0; i<loadedDirCount; i++) {
+                        addArgDirection(true);
+                    }
+
                     Object.keys(state.formData).forEach(key => {
                         const el = document.getElementById(key);
                         if(el) el.value = state.formData[key];
                     });
 
-                    // 恢復 Slide 資料
                     if(state.totalSlides) totalSlides = state.totalSlides;
                     if(state.slideDataStore) slideDataStore = state.slideDataStore;
-                    if(state.slideImages) slideImages = state.slideImages;
+                    if(state.slideImages) slideImages = slideImages;
                     
                     if(state.themeStyle && document.getElementById('theme-style-selector')) document.getElementById('theme-style-selector').value = state.themeStyle;
                     if(state.themeColor && document.getElementById('theme-color')) document.getElementById('theme-color').value = state.themeColor;
@@ -1189,6 +1219,10 @@
                 } catch(e) {
                     console.error("載入進度失敗", e);
                 }
+            } else {
+                argDirCount = 0;
+                addArgDirection();
+                addArgDirection();
             }
         }
 
@@ -1198,10 +1232,8 @@
             const style = document.getElementById('theme-style-selector').value;
             const color = document.getElementById('theme-color').value;
 
-            // 清除舊樣式，加入新樣式
             previewContainer.className = "slide-container " + style;
             
-            // 處理顯示屏標題顏色 
             const previewTitle = document.getElementById('ppt-title');
             previewTitle.style.color = color;
             previewTitle.style.borderBottomColor = color;
@@ -1213,19 +1245,15 @@
                 previewTitle.style.backgroundColor = 'transparent';
             }
 
-            // 更新編輯區標題提示顏色
             document.getElementById('slide-title-display').style.color = color;
-            
             updatePreview();
             saveProgress();
         }
 
         function updatePreview() {
-            // 更新即時顯示屏文字
             document.getElementById('ppt-title').innerText = document.getElementById('slide-title-input').value || '標題預覽';
             document.getElementById('ppt-text').innerText = document.getElementById('slide-content').value || '內容預覽...';
             
-            // 處理排版位置
             const wrapper = document.getElementById('ppt-body-wrapper');
             const pos = document.getElementById('img-position').value;
             const previewImg = document.getElementById('ppt-img');
@@ -1244,7 +1272,7 @@
             }
         }
 
-        // --- 簡報編輯器邏輯 (5頁為基礎) ---
+        // --- 簡報編輯器邏輯 (動態頁面) ---
         function getSlideTitle(index) {
             if (index === 1) return "指出分論點";
             if (index === 2) return "論據一";
@@ -1267,7 +1295,6 @@
                 nav.appendChild(btn);
             }
 
-            // 新增論據頁按鈕
             let addBtn = document.createElement('button');
             addBtn.className = "flex-shrink-0 px-4 py-2 text-sm font-bold text-emerald-600 border-2 border-dashed border-emerald-400 rounded-full hover:bg-emerald-50 transition flex items-center gap-1";
             addBtn.innerHTML = `<span>➕ 新增論據頁</span>`;
@@ -1278,9 +1305,7 @@
         function addExtraSlide() {
             saveCurrentSlide();
             totalSlides++;
-            // 確保資料結構存在
             if(!slideDataStore[totalSlides]) {
-                 // 將總結頁的資料往後移
                 slideDataStore[totalSlides] = slideDataStore[totalSlides - 1] || {};
                 slideDataStore[totalSlides - 1] = {};
                 
@@ -1290,7 +1315,7 @@
                 }
             }
             buildSlideNav();
-            openSlide(totalSlides - 1); // 打開新建立的額外論據頁
+            openSlide(totalSlides - 1);
             saveProgress();
         }
 
@@ -1308,17 +1333,24 @@
                 activeBtn.classList.remove('text-gray-500');
             }
 
-            document.getElementById('slide-title-display').innerText = getSlideTitle(num);
+            let slideName = getSlideTitle(num);
+            document.getElementById('slide-title-display').innerText = slideName;
 
-            // 智能載入該科目的專屬引導
+            let warmNote = document.getElementById('slide-warm-note');
+            if(slideName.includes("論據")) {
+                warmNote.classList.remove('hidden');
+            } else {
+                warmNote.classList.add('hidden');
+            }
+
             let guide;
             if(currentTopicObj && currentTopicObj.guides) {
                  if (num <= 4) {
                      guide = currentTopicObj.guides[num-1];
                  } else if (num === totalSlides) {
-                     guide = currentTopicObj.guides[5]; // 總結永遠讀取最後一個引導
+                     guide = currentTopicObj.guides[5];
                  } else {
-                     guide = currentTopicObj.guides[4]; // 額外論據讀取第五個引導
+                     guide = currentTopicObj.guides[4];
                  }
             }
 
@@ -1330,22 +1362,23 @@
                  document.getElementById('slide-ex').innerHTML = ``;
             }
 
-            // 恢復儲存的資料
             let data = slideDataStore[num] || {};
             document.getElementById('slide-title-input').value = data.title || "";
             document.getElementById('slide-content').value = data.text || "";
             document.getElementById('img-position').value = data.imgPos || "right";
-            document.getElementById('sentence-template').value = "";
+            
+            if(document.getElementById('sentence-template')) {
+                document.getElementById('sentence-template').value = "";
+            }
 
             const removeBtn = document.getElementById('remove-img-btn');
-            
             if(slideImages[num]) {
                 removeBtn.classList.remove('hidden');
             } else {
                 removeBtn.classList.add('hidden');
             }
             document.getElementById('slide-img-input').value = "";
-            updateUITheme(); // 觸發一次更新以套用顏色與文字
+            updateUITheme();
         }
 
         function saveCurrentSlide() {
@@ -1356,14 +1389,15 @@
         }
 
         function applyTemplate() {
-            let tmpl = document.getElementById('sentence-template').value;
+            let tmplElem = document.getElementById('sentence-template');
+            if(!tmplElem) return;
+            let tmpl = tmplElem.value;
             if(!tmpl) return;
             let textArea = document.getElementById('slide-content');
             let currentText = textArea.value;
             if(currentText && !currentText.endsWith('\n')) currentText += '\n';
 
             let addText = "";
-            // 加入擴充詞彙修正與格式填寫
             if(tmpl === "開場介紹") addText = "【開場介紹】各位評委大家好，本集團成立逾_____年。我們是...今天向各位證明...";
             if(tmpl === "先讚後踩") addText = "【先稱讚後批評(先讚後踩)(駁論)】誠然，有人認為...，然而我們實地調查/親身測試發現，本項目突破了局限，做到了...";
             if(tmpl === "先踩後讚") addText = "【先批評後稱讚(先踩後讚)(對比)】以往的設計/服務經常被詬病為...，但我們觀察到本項目打破常規，成功做到...";
@@ -1371,7 +1405,7 @@
             if(tmpl === "段落小結") addText = "【段落小結】由此可見，以上論據確切印證了卓越的表現。接下來交給...";
             
             textArea.value = currentText + addText;
-            document.getElementById('sentence-template').value = "";
+            tmplElem.value = "";
             updatePreview();
             saveProgress();
         }
@@ -1398,7 +1432,7 @@
             saveProgress();
         }
 
-        // --- 匯出功能 (PDF / WORD / PPTX / Slide PDF) ---
+        // --- 匯出功能 (WORD / PPTX / PDF) ---
         function getFileName(suffix) {
             const cls = document.getElementById('stu-class').value || '班級';
             const grp = document.getElementById('stu-group').value || '組別';
@@ -1407,7 +1441,6 @@
         }
 
         function syncExportData() {
-            // 基本資料
             document.getElementById('pdf-class').innerText = document.getElementById('stu-class').value;
             document.getElementById('pdf-group').innerText = document.getElementById('stu-group').value;
             document.getElementById('pdf-id').innerText = document.getElementById('stu-id').value;
@@ -1416,7 +1449,6 @@
             document.getElementById('pdf-target').innerText = document.getElementById('stu-target').value;
             document.getElementById('pdf-subtopic').innerText = document.getElementById('stu-part').value;
             
-            // AI 平台與列表 1-6
             const aiChecked = Array.from(document.querySelectorAll('input[name="ai-platform"]:checked')).map(el => el.value);
             document.getElementById('pdf-ai-platform').innerText = aiChecked.join(', ') || '未選擇';
             
@@ -1427,7 +1459,6 @@
             }
             document.getElementById('pdf-data-ai').innerText = rawList || '未填寫';
             
-            // 篩選整合對照表
             let filteredListHTML = "";
             for(let i=1; i<=6; i++) {
                 let data = document.getElementById(`filtered-data-${i}`).value;
@@ -1441,114 +1472,43 @@
             }
             document.getElementById('pdf-data-filtered').innerHTML = filteredListHTML || '<tr><td colspan="2" style="border: 1px solid #ccc; padding: 8px; text-align:center;">未填寫</td></tr>';
             
-            // 論證結構表 (動態抓取所有生成的 tbody)
             let argsListHTML = "";
             for(let i=1; i<=argDirCount; i++) {
                 let dirElem = document.getElementById(`arg-dir-${i}`);
-                if(!dirElem) continue; // 處理被刪除的列
-                
+                if(!dirElem) continue; 
                 let dir = dirElem.value;
-                for(let j=1; j<=2; j++) {
-                    let ev = document.getElementById(`arg-ev-${i}-${j}`).value;
+                let count = evCount[i] || 2;
+                
+                let validRows = [];
+                for(let j=1; j<=count; j++) {
+                    let evElem = document.getElementById(`arg-ev-${i}-${j}`);
+                    if(!evElem) continue;
+                    let ev = evElem.value;
                     let src = document.getElementById(`arg-src-${i}-${j}`).value;
                     let mth = document.getElementById(`arg-mth-${i}-${j}`).value;
-                    
-                    if(dir || ev || mth) {
-                        argsListHTML += `<tr>`;
-                        if(j===1) argsListHTML += `<td rowspan="2" style="border: 1px solid #666; padding: 8px; font-weight:bold; text-align:center; background:#f9fafb;">${dir}</td>`;
-                        argsListHTML += `
-                            <td style="border: 1px solid #666; padding: 8px;">${j}. ${ev}</td>
-                            <td style="border: 1px solid #666; padding: 8px; text-align:center;">${src}</td>
-                            <td style="border: 1px solid #666; padding: 8px; text-align:center;">${mth}</td>
-                        </tr>`;
-                    }
+                    if(dir || ev || mth) validRows.push({j, ev, src, mth});
+                }
+                
+                if(validRows.length > 0) {
+                     for(let k=0; k<validRows.length; k++) {
+                         argsListHTML += `<tr>`;
+                         if(k===0) argsListHTML += `<td rowspan="${validRows.length}" style="border: 1px solid #666; padding: 8px; font-weight:bold; text-align:center; background:#f9fafb;">${dir}</td>`;
+                         argsListHTML += `<td style="border: 1px solid #666; padding: 8px;">${validRows[k].j}. ${validRows[k].ev}</td>
+                                <td style="border: 1px solid #666; padding: 8px; text-align:center;">${validRows[k].src}</td>
+                                <td style="border: 1px solid #666; padding: 8px; text-align:center;">${validRows[k].mth}</td></tr>`;
+                     }
                 }
             }
             document.getElementById('pdf-data-args').innerHTML = argsListHTML || '<tr><td colspan="4" style="border: 1px solid #666; padding: 8px; text-align:center;">未填寫</td></tr>';
-        }
-
-        function exportPDF() {
-            saveProgress();
-            syncExportData();
-            const el = document.getElementById('pdf-render-area');
-            el.classList.remove('hidden');
-            el.classList.add('block');
-            
-            const opt = {
-                margin:       0.5,
-                filename:     getFileName('資料蒐集報告') + '.pdf',
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2 },
-                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-            };
-            
-            html2pdf().set(opt).from(el).save().then(() => {
-                el.classList.remove('block');
-                el.classList.add('hidden');
-            });
-        }
-
-        // 匯出單張簡報 PDF
-        function exportSlidePDF() {
-            saveProgress();
-            const style = document.getElementById('theme-style-selector').value;
-            const color = document.getElementById('theme-color').value;
-            const renderArea = document.getElementById('slide-pdf-render-area');
-            
-            // 複製當前樣式與內容到渲染區
-            renderArea.className = "slide-container " + style + " w-[1024px] h-[576px]"; // 固定 16:9 比例大小
-            renderArea.classList.remove('hidden');
-
-            const titleEl = document.getElementById('pdf-slide-title');
-            titleEl.innerText = document.getElementById('ppt-title').innerText;
-            titleEl.style.color = color;
-            titleEl.style.borderBottomColor = color;
-
-            if(style === 'theme-tech' || style === 'theme-construction' || style === 'theme-industrial') {
-                titleEl.style.color = '#ffffff';
-                titleEl.style.backgroundColor = color;
-            } else {
-                titleEl.style.backgroundColor = 'transparent';
-            }
-
-            document.getElementById('pdf-slide-text').innerText = document.getElementById('ppt-text').innerText;
-            
-            const pos = document.getElementById('img-position').value;
-            const wrapper = document.getElementById('pdf-slide-body-wrapper');
-            const imgEl = document.getElementById('pdf-slide-img');
-
-            if(slideImages[currentSlideIdx]) {
-                imgEl.src = slideImages[currentSlideIdx];
-                imgEl.style.display = 'block';
-                if(pos === 'left') { wrapper.style.flexDirection = 'row-reverse'; }
-                else if(pos === 'right') { wrapper.style.flexDirection = 'row'; }
-                else if(pos === 'top') { wrapper.style.flexDirection = 'column-reverse'; }
-                else if(pos === 'bottom') { wrapper.style.flexDirection = 'column'; }
-            } else {
-                imgEl.src = "";
-                imgEl.style.display = 'none';
-                wrapper.style.flexDirection = 'row';
-            }
-
-            const opt = {
-                margin:       0,
-                filename:     getFileName(`簡報第${currentSlideIdx}頁`) + '.pdf',
-                image:        { type: 'jpeg', quality: 1 },
-                html2canvas:  { scale: 2, useCORS: true },
-                jsPDF:        { unit: 'px', format: [1024, 576], orientation: 'landscape' }
-            };
-            
-            html2pdf().set(opt).from(renderArea).save().then(() => {
-                renderArea.classList.add('hidden');
-            });
         }
 
         function exportWord() {
             saveProgress();
             syncExportData();
             const el = document.getElementById('pdf-render-area');
+            
+            el.style.display = 'block';
             el.classList.remove('hidden');
-            el.classList.add('block');
             
             const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>報告</title></head><body>";
             const footer = "</body></html>";
@@ -1562,20 +1522,19 @@
             fileDownload.click();
             document.body.removeChild(fileDownload);
             
-            el.classList.remove('block');
+            el.style.display = 'none';
             el.classList.add('hidden');
         }
 
         function exportPPTX() {
             saveProgress();
             let pptx = new PptxGenJS();
-            pptx.layout = 'LAYOUT_16x9';
+            pptx.layout = 'LAYOUT_16x9'; 
             
             const fontFace = 'Microsoft JhengHei';
             const userColorHex = document.getElementById('theme-color').value.replace('#', '');
             const style = document.getElementById('theme-style-selector').value;
             
-            // 決定 PPT 背景色
             let bgColor = "FFFFFF";
             if(style === 'theme-tech') bgColor = "1a1a2e";
             if(style === 'theme-fashion') bgColor = "111827";
@@ -1584,7 +1543,6 @@
             const isDark = (bgColor === "1a1a2e" || bgColor === "111827");
             const fontColor = isDark ? "FFFFFF" : "333333";
 
-            // 建立母片
             pptx.defineSlideMaster({
                 title: "MASTER_SLIDE",
                 background: { color: bgColor },
@@ -1594,7 +1552,6 @@
                 ]
             });
 
-            // 處理所有頁面
             for(let i=1; i<=totalSlides; i++) {
                 let data = slideDataStore[i] || {};
                 let slide = pptx.addSlide({ masterName: "MASTER_SLIDE" });
@@ -1608,18 +1565,16 @@
                 slide.addText(titleText, titleOpts);
                 
                 let rawText = data.text || "";
-                
-                // 處理換行轉成點列式 (bullet)
                 let textArr = rawText.split('\n').filter(t => t.trim() !== '').map(t => ({ text: t, options: { breakLine: true, bullet: t.trim().startsWith('•') } }));
                 if(textArr.length === 0) textArr = [{ text: "（學生未填寫內容草稿）" }];
 
+                // 恢復標準比例的坐標與寬高
                 let textOpts = { 
                     x: 0.5, y: 1.6, w: 9.0, h: 3.6, 
                     fontSize: 18, color: fontColor, fontFace: fontFace, valign: "top", bullet: true
                 };
                 let imgOpts = null;
 
-                // 圖片排版計算 (sizing: 'contain' 自動縮放不變形)
                 if (slideImages[i]) {
                     if (data.imgPos === "right") {
                         textOpts.w = 4.5;
@@ -1642,6 +1597,148 @@
 
             pptx.writeFile({ fileName: getFileName('口頭報告初稿') + '.pptx' });
         }
+
+function exportPDF() {
+    saveProgress();
+
+    // 1. 建立一個專門用於列印的隱藏容器
+    const printContainer = document.createElement('div');
+    printContainer.id = 'print-container';
+    printContainer.style.position = 'fixed';
+    printContainer.style.left = '0';
+    printContainer.style.top = '0';
+    printContainer.style.width = '100vw';
+    printContainer.style.height = '100vh';
+    printContainer.style.background = '#ffffff';
+    printContainer.style.zIndex = '999999';
+    printContainer.style.overflowY = 'auto';
+    printContainer.style.padding = '20px';
+    printContainer.style.boxSizing = 'border-box';
+
+    // 動態加入專屬的列印 CSS 樣式，確保每一頁獨立成張
+    const styleElem = document.createElement('style');
+    styleElem.innerHTML = `
+        @media print {
+            body * { visibility: hidden; }
+            #print-container, #print-container * { visibility: visible; }
+            #print-container { position: absolute; left: 0; top: 0; width: 100%; padding: 0; background: white; }
+            .print-slide { page-break-after: always; break-after: page; }
+        }
+        .print-slide {
+            width: 960px;
+            height: 540px;
+            margin: 0 auto 30px auto;
+            background: #ffffff;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 40px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+    `;
+    printContainer.appendChild(styleElem);
+
+    // 2. 迴圈將每一張投影片的真實內容渲染進去
+    for (let i = 1; i <= totalSlides; i++) {
+        let data = slideDataStore[i] || {};
+        let titleText = data.title || getSlideTitle(i);
+        let textContent = data.text || '（學生未填寫內容草稿）';
+
+        let slideDiv = document.createElement('div');
+        slideDiv.className = 'print-slide';
+
+        let titleElem = document.createElement('h2');
+        titleElem.innerText = titleText;
+        titleElem.style.cssText = "color: #283593; font-size: 26px; font-weight: bold; margin-bottom: 20px; border-bottom: 2px solid #283593; padding-bottom: 10px;";
+
+        let bodyElem = document.createElement('div');
+        bodyElem.style.cssText = "display: flex; flex: 1; gap: 20px; overflow: hidden;";
+
+        let textElem = document.createElement('div');
+        textElem.innerText = textContent;
+        textElem.style.cssText = "font-size: 18px; line-height: 1.6; color: #333333; white-space: pre-wrap; flex: 1;";
+
+        bodyElem.appendChild(textElem);
+
+        // 如果有上傳圖片則加入
+        if (slideImages[i]) {
+            let imgElem = document.createElement('img');
+            imgElem.src = slideImages[i];
+            imgElem.style.cssText = "max-width: 350px; max-height: 300px; object-fit: contain; border-radius: 8px;";
+            bodyElem.appendChild(imgElem);
+        }
+
+        slideDiv.appendChild(titleElem);
+        slideDiv.appendChild(bodyElem);
+        printContainer.appendChild(slideDiv);
+    }
+
+    // 3. 將列印容器掛載到畫面上
+    document.body.appendChild(printContainer);
+
+    // 4. 觸發瀏覽器列印視窗
+    window.print();
+
+    // 5. 列印視窗關閉或完成後，安全移除暫時容器
+    setTimeout(() => {
+        document.body.removeChild(printContainer);
+    }, 1000);
+}
+    </script>
+<!-- AI 學習夥伴教學 Modal -->
+    <div id="modal-ai-helper" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+        <div class="modal-content">
+            <span class="modal-close" onclick="document.getElementById('modal-ai-helper').style.display='none'">&times;</span>
+            <h2 class="text-2xl font-black text-indigo-900 mb-6 border-b-2 border-indigo-200 pb-3 flex items-center gap-2">
+                <span>🤖</span> AI 學習夥伴：你的專題研習研究助理
+            </h2>
+            
+            <div class="space-y-6 text-gray-700">
+                <section>
+                    <h3 class="font-bold text-lg text-indigo-800 mb-2">1. 什麼是 AI 學習夥伴？</h3>
+                    <p class="text-sm leading-relaxed bg-indigo-50 p-4 rounded-lg">
+                        AI 就像一位博學但偶爾會「幻覺」(胡說八道) 的研究助理。它擅長整理靈感、建議方向，但<strong>數據與事實必須由你親自核實</strong>。切記：真正的星級報告，來自於你的現場調查與親身經歷。
+                    </p>
+                </section>
+
+                <section>
+                    <h3 class="font-bold text-lg text-indigo-800 mb-2">2. 黃金指示語規則 (Prompt Rules)</h3>
+                    <ul class="list-disc list-inside text-sm space-y-2 ml-2">
+                        <li><strong>設定角色：</strong>「你現在是一位正在進行專題研習的學員，研究題目是...」</li>
+                        <li><strong>定義任務：</strong>「請協助我規劃研究方向，目標是證明 [分論點]。請提供調查方向，而非直接給出論據。」</li>
+                        <li><strong>導向調查：</strong>「請建議我應該觀察哪些現象，或詢問哪些關鍵問題。」</li>
+                    </ul>
+                </section>
+
+                <section class="bg-gradient-to-r from-orange-50 to-amber-50 p-4 rounded-xl border border-orange-200">
+                    <h3 class="font-bold text-lg text-amber-900 mb-2">3. 專屬指示語生成器範本</h3>
+                    <p class="text-xs text-amber-800 mb-3">當您在上方選好題目與評審準則後，直接複製此範本詢問 AI：</p>
+                    <div class="bg-white p-3 rounded border border-amber-200 font-mono text-xs text-gray-700 italic select-all leading-relaxed">
+                        「我現在是一位正在進行專題研習的學員，研究題目是「<span id="modal-topic-placeholder" class="text-indigo-600 font-bold">請先選擇題目</span>」。我負責的分論點是「<span id="modal-part-placeholder" class="text-indigo-600 font-bold">請先選擇準則</span>」。請協助我：1. 列出 3 個具體的調查切入點，讓我能透過『一手調查』去搜集資料。2. 針對這些調查切入點，建議我應該觀察哪些具體現象，或詢問哪些關鍵問題？3. 這些調查方向如何幫助我證明這個分論點的說服力？」
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // 開啟 AI 學習夥伴視窗並自動代入學生當前選擇的題目與分論點
+    function openAIHelperModal() {
+        const modal = document.getElementById('modal-ai-helper');
+        const topicPlaceholder = document.getElementById('modal-topic-placeholder');
+        const partPlaceholder = document.getElementById('modal-part-placeholder');
+        
+        const selectedTopic = currentTopicObj ? currentTopicObj.title : "請先回到步驟一選擇題目";
+        const selectedPart = document.getElementById('stu-part').value || "請先填寫分論點";
+        
+        topicPlaceholder.innerText = selectedTopic;
+        partPlaceholder.innerText = selectedPart;
+        
+        modal.style.display = 'flex';
+    }
     </script>
 </body>
 </html>
