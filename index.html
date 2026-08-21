@@ -9,10 +9,6 @@
     <!-- PptxGenJS -->
     <script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/libs/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.min.js"></script>
-    <!-- html2pdf.js (新增：用於匯出 PDF) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <!-- 補上這行標準 jsPDF 獨立庫，確保全域讀取正常 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <style>
         /* 色彩與動感背景 */
@@ -37,28 +33,44 @@
         .tab-btn.active { border-bottom-color: #3b82f6; color: #1d4ed8; font-weight: 800; background: linear-gradient(to top, #eff6ff, #ffffff); }
         .tab-btn:hover:not(.active) { background-color: #f8fafc; color: #2563eb; }
         
-        /* 左右分屏工作區 */
-        .workspace { display: flex; gap: 24px; align-items: stretch; min-height: 650px; flex-direction: column; }
-        @media (min-width: 1024px) { .workspace { flex-direction: row; } }
+        /* 左右分屏工作區 (完美適配手機與電腦) */
+        .workspace { display: flex; gap: 24px; align-items: stretch; flex-direction: column; }
+        @media (min-width: 1024px) { 
+            .workspace { flex-direction: row; min-height: 650px; } 
+        }
         .editor-panel { flex: 1.2; overflow-y: auto; background: rgba(255,255,255,0.95); padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; backdrop-filter: blur(10px); }
-        .preview-panel { flex: 1; overflow-y: auto; overflow-x: auto; background: #f8fafc; padding: 25px; border-radius: 16px; box-shadow: inset 0 2px 15px rgba(0,0,0,0.05), 0 10px 30px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; position: sticky; top: 80px; height: calc(100vh - 100px); }
         
-        /* 簡報顯示屏樣式 (固定為 960x540 真實比例大小) */
-        .slide-container { width: 960px; height: 540px; min-width: 960px; position: relative; padding: 5%; box-sizing: border-box; display: flex; flex-direction: column; transition: all 0.5s ease; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); overflow: hidden; background-size: cover; background-position: center; margin: 0 auto; }
-        .slide-title { font-size: 28px; font-weight: 900; margin-bottom: 4%; padding-bottom: 2%; flex-shrink: 0; z-index: 2; position: relative; transition: color 0.3s ease; }
-        .slide-body-wrapper { display: flex; flex: 1; gap: 20px; overflow: hidden; z-index: 2; position: relative; }
-        .slide-content { font-size: 18px; line-height: 1.7; white-space: pre-wrap; flex: 1; overflow-y: auto; transition: color 0.3s ease; }
+        .preview-panel { 
+            flex: 1; overflow-y: auto; overflow-x: hidden; background: #f8fafc; padding: 15px; 
+            border-radius: 16px; box-shadow: inset 0 2px 15px rgba(0,0,0,0.05), 0 10px 30px rgba(0,0,0,0.08); 
+            border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; width: 100%; box-sizing: border-box;
+        }
+        @media (min-width: 1024px) {
+            .preview-panel { padding: 25px; position: sticky; top: 80px; height: calc(100vh - 100px); }
+        }
+        
+        /* 簡報顯示屏樣式 (改為全響應式 16:9 比例，自動縮放防裁切) */
+        .slide-container { 
+            width: 100%; max-width: 960px; aspect-ratio: 16 / 9; container-type: inline-size; 
+            position: relative; padding: 5%; box-sizing: border-box; display: flex; flex-direction: column; 
+            transition: all 0.5s ease; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); 
+            overflow: hidden; background-size: cover; background-position: center; margin: 0 auto; flex-shrink: 0;
+        }
+        .slide-title { font-size: clamp(16px, 4cqi, 32px); font-weight: 900; margin-bottom: 4%; padding-bottom: 2%; flex-shrink: 0; z-index: 2; position: relative; transition: color 0.3s ease; }
+        .slide-body-wrapper { display: flex; flex: 1; gap: 3cqi; overflow: hidden; z-index: 2; position: relative; }
+        .slide-content { font-size: clamp(12px, 2.5cqi, 20px); line-height: 1.7; white-space: pre-wrap; flex: 1; overflow-y: auto; transition: color 0.3s ease; }
         .slide-uploaded-img { max-width: 48%; max-height: 100%; object-fit: contain; border-radius: 8px; box-shadow: 0 8px 16px rgba(0,0,0,0.15); display: none; flex-shrink: 0; z-index: 2; position: relative; }
 
         /* 輸入框與表格色彩強化 */
         .data-table-input { width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; font-size: 0.9rem; outline: none; transition: 0.3s; }
         .data-table-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
-        .data-table th { background: linear-gradient(90deg, #0ea5e9, #2563eb); color: white; padding: 10px; text-align: center; border: 1px solid #0284c7; font-weight: bold; letter-spacing: 1px;}
-        .data-table td { border: 1px solid #cbd5e1; padding: 10px; vertical-align: middle; background: #fff; }
+        .data-table th { background: linear-gradient(90deg, #0ea5e9, #2563eb); color: white; padding: 10px; text-align: center; border: 1px solid #0284c7; font-weight: bold; letter-spacing: 1px; white-space: nowrap;}
+        .data-table td { border: 1px solid #cbd5e1; padding: 10px; vertical-align: middle; background: #fff; min-width: 120px;}
         
         /* 浮動儲存按鈕 */
         .floating-save-btn { position: fixed; bottom: 30px; right: 30px; z-index: 9999; background: linear-gradient(135deg, #10b981, #059669); color: white; font-weight: bold; padding: 15px 25px; border-radius: 50px; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.5); cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; font-size: 1.1rem; }
         .floating-save-btn:hover { transform: translateY(-5px) scale(1.05); box-shadow: 0 15px 30px rgba(16, 185, 129, 0.6); }
+        @media (max-width: 768px) { .floating-save-btn { bottom: 15px; right: 15px; padding: 10px 15px; font-size: 0.9rem;} }
 
         /* 8 種預設簡報風格 */
         .theme-office { background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%); border-left: 12px solid #283593; }
@@ -83,19 +95,20 @@
         .demo-flowchart { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
         .demo-box-main { background: #e2e8f0; border-radius: 8px; padding: 15px; text-align: center; width: 80%; position: relative; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .demo-box-main::after { content: '↓'; position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 24px; color: #94a3b8; }
-        .demo-sub-boxes { display: flex; gap: 15px; justify-content: center; width: 100%; }
-        .demo-box-sub { flex: 1; padding: 10px; border-radius: 8px; color: white; font-weight: bold; text-align: center; font-size: 0.9rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .demo-sub-boxes { display: flex; gap: 15px; justify-content: center; width: 100%; flex-wrap: wrap; }
+        .demo-box-sub { flex: 1; min-width: 120px; padding: 10px; border-radius: 8px; color: white; font-weight: bold; text-align: center; font-size: 0.9rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .demo-bg-1 { background-color: #0284c7; }
         .demo-bg-2 { background-color: #ea580c; }
         .demo-bg-3 { background-color: #65a30d; }
-        .demo-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: white; margin-bottom: 20px;}
+        .demo-table { width: 100%; min-width: 600px; border-collapse: collapse; font-size: 0.85rem; background: white; margin-bottom: 20px;}
         .demo-table th { background: #0284c7; color: white; padding: 8px; text-align: center; border: 1px solid #e2e8f0; }
         .demo-table td { border: 1px solid #e2e8f0; padding: 8px; vertical-align: middle; }
         
         /* Modal 樣式 */
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
-        .modal-content { background: #fff; padding: 30px; border-radius: 16px; width: 95%; max-width: 950px; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
-        .modal-close { position: absolute; top: 15px; right: 20px; font-size: 32px; cursor: pointer; color: #64748b; transition: 0.2s; }
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(5px); padding: 10px;}
+        .modal-content { background: #fff; padding: 30px; border-radius: 16px; width: 100%; max-width: 950px; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        @media (max-width: 768px) { .modal-content { padding: 15px; } }
+        .modal-close { position: absolute; top: 15px; right: 20px; font-size: 32px; cursor: pointer; color: #64748b; transition: 0.2s; z-index: 50; }
         .modal-close:hover { color: #ef4444; transform: rotate(90deg); }
         
         .fade-in { animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
@@ -110,23 +123,23 @@
             <h1 class="text-xl md:text-2xl font-extrabold tracking-wide flex items-center gap-2">
                 <span class="text-3xl animate-bounce">🎓</span> 專題研習口頭報告初稿製作平台
             </h1>
-            <button onclick="goHome()" class="bg-white/20 hover:bg-white/30 backdrop-blur border border-white/40 px-5 py-2 rounded-full text-sm font-bold shadow-lg transition transform hover:-translate-y-1">🏠 回首頁</button>
+            <button onclick="goHome()" class="bg-white/20 hover:bg-white/30 backdrop-blur border border-white/40 px-3 py-1.5 md:px-5 md:py-2 rounded-full text-sm font-bold shadow-lg transition transform hover:-translate-y-1">🏠 回首頁</button>
         </div>
     </nav>
 
     <!-- 浮動儲存按鈕 -->
     <div class="floating-save-btn" onclick="saveProgress()">
-        <span class="text-2xl">💾</span> 儲存進度
+        <span class="text-xl md:text-2xl">💾</span> <span class="hidden md:inline">儲存進度</span>
     </div>
 
     <!-- 視圖 1：首頁 (學習目標與題目選擇) -->
-    <div id="view-home" class="container mx-auto p-6 max-w-7xl fade-in mt-4">
+    <div id="view-home" class="container mx-auto p-4 md:p-6 max-w-7xl fade-in mt-4">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10">
             
             <!-- 左側：影片與目標 -->
             <div class="lg:col-span-5 flex flex-col gap-6">
                 <!-- 示範影片區 -->
-                <div class="bg-white p-6 rounded-2xl shadow-xl border-t-8 border-blue-500 text-center relative overflow-hidden">
+                <div class="bg-white p-4 md:p-6 rounded-2xl shadow-xl border-t-8 border-blue-500 text-center relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500"></div>
                     <h2 class="text-xl font-bold mb-2 text-blue-900 flex items-center justify-center gap-2"><span class="text-2xl">📺</span> 觀看口頭匯報示範</h2>
                     <p class="text-sm text-gray-600 mb-5">在開始製作前，請先點擊觀看標準示範影片，了解報告結構與技巧。</p>
@@ -151,7 +164,7 @@
                 </div>
 
                 <!-- 預期學習目標 -->
-                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl shadow-xl border border-blue-200 flex-grow">
+                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 md:p-6 rounded-2xl shadow-xl border border-blue-200 flex-grow">
                     <h2 class="text-lg font-extrabold mb-3 text-indigo-900 flex items-center gap-2"><span class="text-2xl">🎯</span> 預期學習目標</h2>
                     <p class="mb-4 text-xs text-gray-700 leading-relaxed text-justify font-medium bg-white/60 p-3 rounded-lg border border-white/80 shadow-sm">普通話報告單元將以專題研習的形式進行。除了課堂上老師教授的各種語言功能外，同學還需要結合專業知識，通過資料搜集、分析、歸納、簡報製作及團隊協作等，逐步掌握日後工作所需的各項技能。專題研習的學習成果以口頭報告的方式呈現。</p>
                     
@@ -186,20 +199,20 @@
             </div>
 
             <!-- 右側：題目選擇與資料填寫 -->
-            <div class="lg:col-span-7 bg-white p-8 rounded-2xl shadow-2xl border border-gray-100 relative overflow-hidden">
+            <div class="lg:col-span-7 bg-white p-6 md:p-8 rounded-2xl shadow-2xl border border-gray-100 relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-32 h-32 bg-blue-100 rounded-bl-full -z-10 opacity-50"></div>
                 
-                <h2 class="text-2xl font-black mb-5 text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700 border-b-2 border-blue-100 pb-3 flex items-center gap-2">
+                <h2 class="text-xl md:text-2xl font-black mb-5 text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700 border-b-2 border-blue-100 pb-3 flex items-center gap-2">
                     <span>📝</span> 步驟一：選擇專題研習題目
                 </h2>
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8" id="topic-grid">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8" id="topic-grid">
                     <!-- 動態生成題目按鈕 -->
                 </div>
 
-                <h2 class="text-2xl font-black mb-5 text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 to-purple-700 border-b-2 border-indigo-100 pb-3 flex items-center gap-2">
+                <h2 class="text-xl md:text-2xl font-black mb-5 text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 to-purple-700 border-b-2 border-indigo-100 pb-3 flex items-center gap-2">
                     <span>👤</span> 步驟二：填寫基本資料
                 </h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8 bg-gradient-to-br from-gray-50 to-blue-50 p-6 rounded-xl border border-blue-100 shadow-inner">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8 bg-gradient-to-br from-gray-50 to-blue-50 p-4 md:p-6 rounded-xl border border-blue-100 shadow-inner">
                     <div><label class="block text-sm font-bold text-gray-700 mb-2">班級</label><input type="text" id="stu-class" placeholder="例：EG114001/2C" class="w-full border-2 border-white shadow-sm p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"></div>
                     <div><label class="block text-sm font-bold text-gray-700 mb-2">小組編號</label><input type="text" id="stu-group" placeholder="例：第 1 組" class="w-full border-2 border-white shadow-sm p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"></div>
                     <div><label class="block text-sm font-bold text-gray-700 mb-2">學號</label><input type="text" id="stu-id" placeholder="例：20010101" class="w-full border-2 border-white shadow-sm p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"></div>
@@ -213,7 +226,7 @@
                     </div>
                 </div>
 
-                <button onclick="enterWorkspace()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-xl py-5 rounded-2xl shadow-xl hover:from-blue-700 hover:to-indigo-700 hover:shadow-2xl transition-all transform hover:-translate-y-2 flex justify-center items-center gap-3">
+                <button onclick="enterWorkspace()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-xl py-4 md:py-5 rounded-2xl shadow-xl hover:from-blue-700 hover:to-indigo-700 hover:shadow-2xl transition-all transform hover:-translate-y-2 flex justify-center items-center gap-3">
                     <span class="text-3xl">🚀</span> 進入簡報初稿製作空間
                 </button>
             </div>
@@ -221,81 +234,83 @@
     </div>
 
     <!-- 視圖 2：製作工作區 -->
-    <div id="workspace-view" class="container mx-auto p-4 max-w-[1500px] hidden fade-in">
+    <div id="workspace-view" class="container mx-auto p-2 md:p-4 max-w-[1500px] hidden fade-in">
         
         <!-- 頂部動態資訊列 -->
-        <div class="bg-gradient-to-r from-blue-800 to-indigo-900 text-white px-8 py-5 rounded-2xl shadow-lg mb-8 flex flex-col md:flex-row justify-between items-start md:items-center relative overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-800 to-indigo-900 text-white px-4 py-4 md:px-8 md:py-5 rounded-2xl shadow-lg mb-6 md:mb-8 flex flex-col md:flex-row justify-between items-start md:items-center relative overflow-hidden">
             <div class="absolute top-0 right-0 w-64 h-full bg-white opacity-5 transform skew-x-12"></div>
             <div class="z-10">
-                <h2 id="ws-topic-title" class="text-2xl font-black mb-1 drop-shadow-md">題目：載入中...</h2>
-                <p id="ws-target-title" class="text-md text-blue-200 font-bold tracking-wide"></p>
+                <h2 id="ws-topic-title" class="text-xl md:text-2xl font-black mb-1 drop-shadow-md">題目：載入中...</h2>
+                <p id="ws-target-title" class="text-sm md:text-md text-blue-200 font-bold tracking-wide"></p>
             </div>
-            <div class="z-10 mt-4 md:mt-0 text-right">
-                <div class="bg-white/20 backdrop-blur px-5 py-2 rounded-full border border-white/30 text-sm font-bold shadow-inner" id="ws-student-info"></div>
+            <div class="z-10 mt-3 md:mt-0 text-left md:text-right w-full md:w-auto">
+                <div class="bg-white/20 backdrop-blur px-4 py-2 rounded-lg md:rounded-full border border-white/30 text-xs md:text-sm font-bold shadow-inner" id="ws-student-info"></div>
             </div>
         </div>
 
         <!-- 模塊切換 Tabs -->
-        <div class="flex border-b-4 border-gray-200 mb-8 px-4 gap-2">
-            <button onclick="switchMainTab('part1')" id="tab-part1" class="tab-btn active px-10 py-4 text-xl rounded-t-2xl bg-white border-t-2 border-l-2 border-r-2 border-gray-200 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] transition-all">📝 第一部分：資料蒐集與論證結構</button>
-            <button onclick="switchMainTab('part2')" id="tab-part2" class="tab-btn px-10 py-4 text-xl rounded-t-2xl text-gray-500 hover:text-blue-700 hover:bg-blue-50 transition-all border-b-4 border-transparent">🖼️ 第二部分：簡報初稿視覺製作</button>
+        <div class="flex border-b-4 border-gray-200 mb-6 md:mb-8 px-2 md:px-4 gap-1 md:gap-2 overflow-x-auto">
+            <button onclick="switchMainTab('part1')" id="tab-part1" class="tab-btn active px-4 py-3 md:px-10 md:py-4 text-sm md:text-xl rounded-t-xl md:rounded-t-2xl bg-white border-t-2 border-l-2 border-r-2 border-gray-200 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] transition-all whitespace-nowrap">📝 第一部分：資料蒐集與論證結構</button>
+            <button onclick="switchMainTab('part2')" id="tab-part2" class="tab-btn px-4 py-3 md:px-10 md:py-4 text-sm md:text-xl rounded-t-xl md:rounded-t-2xl text-gray-500 hover:text-blue-700 hover:bg-blue-50 transition-all border-b-4 border-transparent whitespace-nowrap">🖼️ 第二部分：簡報初稿視覺製作</button>
         </div>
 
         <!-- ==================== 第一部分：資料蒐集 ==================== -->
-        <div id="content-part1" class="bg-white p-8 md:p-10 rounded-b-2xl rounded-tr-2xl shadow-2xl border border-gray-100">
+        <div id="content-part1" class="bg-white p-4 md:p-10 rounded-b-2xl rounded-tr-2xl shadow-2xl border border-gray-100">
             
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-10 mb-10">
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-10 mb-10">
                 <!-- AI 平台選擇 -->
-                <div class="bg-gradient-to-br from-gray-50 to-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                    <h3 class="text-xl font-black mb-4 flex items-center text-gray-800"><span class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 shadow-md text-sm">1</span> 選擇 AI 輔助平台</h3>
-                    <p class="text-sm text-gray-500 mb-5 font-medium">小組內請分工使用不同平台，點擊「前往」可直接開新視窗。</p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div class="flex items-center justify-between bg-white p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
-                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700"><input type="checkbox" name="ai-platform" value="DeepSeek" class="w-5 h-5 accent-blue-600"><span>DeepSeek</span></label>
+                <div class="bg-gradient-to-br from-gray-50 to-white p-4 md:p-6 rounded-2xl border border-gray-200 shadow-sm">
+                    <h3 class="text-lg md:text-xl font-black mb-4 flex items-center text-gray-800"><span class="bg-blue-600 text-white w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center mr-3 shadow-md text-sm">1</span> 選擇 AI 輔助平台</h3>
+                    
+                    <!-- 移至此處：啟動 AI 夥伴按鈕 -->
+                    <div class="mb-5">
+                        <button onclick="openAIHelperModal()" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-indigo-700 transition transform hover:-translate-y-1 flex justify-center items-center gap-2">
+                            <span>🤖</span> 啟動「AI 學習夥伴」教學
+                        </button>
+                        <p class="text-xs md:text-sm text-gray-500 mt-3 font-medium">請先點擊上方按鈕簡單了解 AI 協助方法與複製範本，再於小組內分工使用不同平台，點擊「前往」可直接開新視窗。</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="flex items-center justify-between bg-white p-2.5 md:p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
+                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700 text-sm md:text-base"><input type="checkbox" name="ai-platform" value="DeepSeek" class="w-4 h-4 md:w-5 md:h-5 accent-blue-600"><span>DeepSeek</span></label>
                             <a href="https://chat.deepseek.com/" target="_blank" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-bold border border-blue-200">🔗 前往</a>
                         </div>
-                        <div class="flex items-center justify-between bg-white p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
-                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700"><input type="checkbox" name="ai-platform" value="VTC GenAI" class="w-5 h-5 accent-blue-600"><span>VTC GenAI</span></label>
+                        <div class="flex items-center justify-between bg-white p-2.5 md:p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
+                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700 text-sm md:text-base"><input type="checkbox" name="ai-platform" value="VTC GenAI" class="w-4 h-4 md:w-5 md:h-5 accent-blue-600"><span>VTC GenAI</span></label>
                             <a href="https://genai.vtc.edu.hk/" target="_blank" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-bold border border-blue-200">🔗 前往</a>
                         </div>
-                        <div class="flex items-center justify-between bg-white p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
-                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700"><input type="checkbox" name="ai-platform" value="Google Gemini" class="w-5 h-5 accent-blue-600"><span>Gemini</span></label>
+                        <div class="flex items-center justify-between bg-white p-2.5 md:p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
+                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700 text-sm md:text-base"><input type="checkbox" name="ai-platform" value="Google Gemini" class="w-4 h-4 md:w-5 md:h-5 accent-blue-600"><span>Gemini</span></label>
                             <a href="https://gemini.google.com/" target="_blank" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-bold border border-blue-200">🔗 前往</a>
                         </div>
-                        <div class="flex items-center justify-between bg-white p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
-                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700"><input type="checkbox" name="ai-platform" value="Microsoft Copilot" class="w-5 h-5 accent-blue-600"><span>Copilot</span></label>
+                        <div class="flex items-center justify-between bg-white p-2.5 md:p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
+                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700 text-sm md:text-base"><input type="checkbox" name="ai-platform" value="Microsoft Copilot" class="w-4 h-4 md:w-5 md:h-5 accent-blue-600"><span>Copilot</span></label>
                             <a href="https://copilot.microsoft.com/" target="_blank" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-bold border border-blue-200">🔗 前往</a>
                         </div>
-                        <div class="flex items-center justify-between bg-white p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
-                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700"><input type="checkbox" name="ai-platform" value="豆包 (Doubao)" class="w-5 h-5 accent-blue-600"><span>豆包 (Doubao)</span></label>
+                        <div class="flex items-center justify-between bg-white p-2.5 md:p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
+                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700 text-sm md:text-base"><input type="checkbox" name="ai-platform" value="豆包 (Doubao)" class="w-4 h-4 md:w-5 md:h-5 accent-blue-600"><span>豆包 (Doubao)</span></label>
                             <a href="https://www.doubao.com/" target="_blank" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-bold border border-blue-200">🔗 前往</a>
                         </div>
-                        <div class="flex items-center justify-between bg-white p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
-                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700"><input type="checkbox" name="ai-platform" value="Perplexity" class="w-5 h-5 accent-blue-600"><span>Perplexity</span></label>
+                        <div class="flex items-center justify-between bg-white p-2.5 md:p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
+                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700 text-sm md:text-base"><input type="checkbox" name="ai-platform" value="Perplexity" class="w-4 h-4 md:w-5 md:h-5 accent-blue-600"><span>Perplexity</span></label>
                             <a href="https://www.perplexity.ai/" target="_blank" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-bold border border-blue-200">🔗 前往</a>
                         </div>
-                        <div class="flex items-center justify-between bg-white p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
-                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700"><input type="checkbox" name="ai-platform" value="Grok" class="w-5 h-5 accent-blue-600"><span>Grok</span></label>
+                        <div class="flex items-center justify-between bg-white p-2.5 md:p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
+                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700 text-sm md:text-base"><input type="checkbox" name="ai-platform" value="Grok" class="w-4 h-4 md:w-5 md:h-5 accent-blue-600"><span>Grok</span></label>
                             <a href="https://grok.com/" target="_blank" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-bold border border-blue-200">🔗 前往</a>
                         </div>
-                        <div class="flex items-center justify-between bg-white p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
-                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700"><input type="checkbox" name="ai-platform" value="Poe" class="w-5 h-5 accent-blue-600"><span>Poe</span></label>
+                        <div class="flex items-center justify-between bg-white p-2.5 md:p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
+                            <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700 text-sm md:text-base"><input type="checkbox" name="ai-platform" value="Poe" class="w-4 h-4 md:w-5 md:h-5 accent-blue-600"><span>Poe</span></label>
                             <a href="https://poe.com/" target="_blank" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-bold border border-blue-200">🔗 前往</a>
                         </div>
                     </div>
                 </div>
 
-                <div class="mt-4">
-                        <button onclick="openAIHelperModal()" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-indigo-700 transition transform hover:-translate-y-1 flex justify-center items-center gap-2">
-                            <span>🤖</span> 啟動「AI 學習夥伴」教學
-                        </button>
-                    </div>
-
                 <!-- 倫理聲明 -->
-                <div class="bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-300 p-6 rounded-2xl shadow-md relative overflow-hidden">
+                <div class="bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-300 p-4 md:p-6 rounded-2xl shadow-md relative overflow-hidden">
                     <div class="absolute -right-4 -top-4 text-7xl opacity-10">⚖️</div>
-                    <h3 class="text-xl font-black text-yellow-900 mb-3 flex items-center gap-2"><span>⚖️</span> 真相核查員 (Ethics & Fact Checker)</h3>
-                    <p class="text-sm text-yellow-800 mb-5 leading-relaxed font-medium bg-white/50 p-3 rounded border border-yellow-200">
+                    <h3 class="text-lg md:text-xl font-black text-yellow-900 mb-3 flex items-center gap-2"><span>⚖️</span> 真相核查員 (Ethics & Fact Checker)</h3>
+                    <p class="text-xs md:text-sm text-yellow-800 mb-5 leading-relaxed font-medium bg-white/50 p-3 rounded border border-yellow-200">
                         遵守學術誠信：界定可用範圍；不輸入敏感資料；尊重知識產權；留意偏見；不以 AI 取代個人思考。
                     </p>
                     <div class="space-y-4 bg-white p-4 rounded-xl border border-yellow-200 shadow-sm">
@@ -312,9 +327,9 @@
             </div>
 
             <!-- 1. 原始資料結構 -->
-            <div class="bg-white p-6 rounded-2xl border-2 border-gray-200 mb-8 shadow-sm">
-                <h3 class="text-lg font-black text-gray-800 mb-4 border-l-8 border-gray-400 pl-3">2. 從 AI 獲得的原始資料結構：</h3>
-                <div id="ai-structure-hint" class="text-sm text-blue-800 mb-5 bg-blue-50 p-4 rounded-lg border border-blue-200 shadow-inner font-bold flex gap-3 items-start">
+            <div class="bg-white p-4 md:p-6 rounded-2xl border-2 border-gray-200 mb-8 shadow-sm">
+                <h3 class="text-base md:text-lg font-black text-gray-800 mb-4 border-l-8 border-gray-400 pl-3">2. 從 AI 獲得的原始資料結構：</h3>
+                <div id="ai-structure-hint" class="text-xs md:text-sm text-blue-800 mb-5 bg-blue-50 p-4 rounded-lg border border-blue-200 shadow-inner font-bold flex gap-3 items-start">
                     <span class="text-xl">💡</span> <span id="hint-text">指示語載入中...</span>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="ai-raw-list">
@@ -328,44 +343,44 @@
             </div>
 
             <!-- 2. 篩選與重新編寫 -->
-            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl border-2 border-blue-200 mb-8 shadow-sm">
-                <h3 class="text-lg font-black text-blue-900 mb-5 border-l-8 border-blue-600 pl-3">3. 經過篩選、整合和重新編寫的資料：</h3>
+            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 md:p-6 rounded-2xl border-2 border-blue-200 mb-8 shadow-sm">
+                <h3 class="text-base md:text-lg font-black text-blue-900 mb-5 border-l-8 border-blue-600 pl-3">3. 經過篩選、整合和重新編寫的資料：</h3>
                 <div class="space-y-4" id="ai-filtered-list">
                     <!-- JS 動態生成 6 列雙欄位 -->
                 </div>
             </div>
 
             <!-- 3. 論證結構表格 (動態新增) -->
-            <div class="bg-gradient-to-br from-emerald-50 to-green-50 p-6 rounded-2xl border-2 border-emerald-300 mb-8 relative shadow-md">
-                <div class="flex justify-between items-center mb-5 border-b border-emerald-200 pb-3">
-                    <h3 class="text-lg font-black text-emerald-900 border-l-8 border-emerald-600 pl-3">4. 資料蒐集與論證結構 (鋪排簡報內容)：</h3>
-                    <button onclick="openTableExample()" class="bg-gradient-to-r from-orange-400 to-red-500 text-white px-5 py-2 rounded-full text-sm font-bold hover:shadow-lg hover:scale-105 transition flex items-center gap-2">
+            <div class="bg-gradient-to-br from-emerald-50 to-green-50 p-4 md:p-6 rounded-2xl border-2 border-emerald-300 mb-8 relative shadow-md">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-5 border-b border-emerald-200 pb-3">
+                    <h3 class="text-base md:text-lg font-black text-emerald-900 border-l-8 border-emerald-600 pl-3">4. 資料蒐集與論證結構 (鋪排簡報內容)：</h3>
+                    <button onclick="openTableExample()" class="w-full md:w-auto bg-gradient-to-r from-orange-400 to-red-500 text-white px-5 py-2 rounded-full text-sm font-bold hover:shadow-lg hover:scale-105 transition flex items-center justify-center gap-2">
                         <span class="text-lg">👀</span> 點擊看填寫示範
                     </button>
                 </div>
                 
-                <div class="bg-yellow-50 border-l-8 border-yellow-500 p-5 mb-6 shadow-md rounded-r-xl">
-                    <h4 class="text-xl font-black text-red-600 mb-2 flex items-center gap-2">
-                        <span class="text-2xl">⚠️</span> 重點提示：
+                <div class="bg-yellow-50 border-l-8 border-yellow-500 p-4 md:p-5 mb-6 shadow-md rounded-r-xl">
+                    <h4 class="text-lg md:text-xl font-black text-red-600 mb-2 flex items-center gap-2">
+                        <span class="text-xl md:text-2xl">⚠️</span> 重點提示：
                     </h4>
-                    <p class="text-lg font-bold text-gray-800 leading-relaxed">
-                        <span class="text-red-600 text-xl">請將上述重整後的資料，結合你親自搜集的調查，填入以下表格構建論據。</span><br>
-                        <span class="text-sm text-gray-600 mt-2 block">（從 AI 找資料只是一小部分，必須加入自己調查的<span class="text-blue-700 underline">第一手論據</span>，才能讓論證具有真實說服力！）</span>
+                    <p class="text-sm md:text-lg font-bold text-gray-800 leading-relaxed">
+                        <span class="text-red-600 text-base md:text-xl">請將上述重整後的資料，結合你親自搜集的調查，填入以下表格構建論據。</span><br>
+                        <span class="text-xs md:text-sm text-gray-600 mt-2 block">（從 AI 找資料只是一小部分，必須加入自己調查的<span class="text-blue-700 underline">第一手論據</span>，才能讓論證具有真實說服力！）</span>
                     </p>
                 </div>
 
-                <p class="text-sm text-red-600 mt-2 mb-2 font-bold bg-red-50 p-3 rounded-lg border border-red-200 shadow-sm flex items-center gap-2">
+                <p class="text-xs md:text-sm text-red-600 mt-2 mb-2 font-bold bg-red-50 p-3 rounded-lg border border-red-200 shadow-sm flex items-center gap-2">
                     <span class="text-xl">📌</span> 備註：如沒有次分論點，可只填寫分論點和提供第一手資料及第二手資料。
                 </p>
                 
                 <div class="overflow-x-auto rounded-xl border border-emerald-200 shadow-sm">
-                    <table class="data-table w-full bg-white text-sm" id="args-table-container">
+                    <table class="data-table w-full bg-white text-xs md:text-sm" id="args-table-container">
                         <thead>
                             <tr class="bg-emerald-600 text-white">
-                                <th width="22%" class="py-3">論證方向 (次分論點)</th>
-                                <th width="38%" class="py-3">論據</th>
-                                <th width="20%" class="py-3">資料搜集方法</th>
-                                <th width="20%" class="py-3">論證方法</th>
+                                <th width="22%" class="py-3 min-w-[120px]">論證方向 (次分論點)</th>
+                                <th width="38%" class="py-3 min-w-[200px]">論據</th>
+                                <th width="20%" class="py-3 min-w-[120px]">資料搜集方法</th>
+                                <th width="20%" class="py-3 min-w-[120px]">論證方法</th>
                             </tr>
                         </thead>
                         <!-- 預設生成，透過 JS 初始化 -->
@@ -381,23 +396,23 @@
             <!-- 第一部分匯出按鈕 -->
             <div class="mt-10 flex flex-col md:flex-row justify-between items-center border-t-2 border-gray-200 pt-6 gap-4">
                 <div class="flex gap-4 w-full md:w-auto">
-                    <button onclick="exportWord()" class="flex-1 md:flex-none w-full bg-blue-600 text-white px-8 py-4 rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-xl flex justify-center items-center transition font-bold text-lg"><span class="text-2xl mr-2">📝</span> 下載 Word 報告</button>
+                    <button onclick="exportWord()" class="flex-1 md:flex-none w-full bg-blue-600 text-white px-6 md:px-8 py-3 md:py-4 rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-xl flex justify-center items-center transition font-bold text-base md:text-lg"><span class="text-xl md:text-2xl mr-2">📝</span> 下載 Word 報告</button>
                 </div>
-                <button onclick="checkPart1AndGoPart2()" class="w-full md:w-auto bg-gradient-to-r from-green-500 to-emerald-600 text-white px-12 py-4 rounded-xl font-black shadow-xl hover:from-green-600 hover:to-emerald-700 text-xl transition transform hover:-translate-y-1">
+                <button onclick="checkPart1AndGoPart2()" class="w-full md:w-auto bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 md:px-12 py-3 md:py-4 rounded-xl font-black shadow-xl hover:from-green-600 hover:to-emerald-700 text-base md:text-xl transition transform hover:-translate-y-1">
                     進入簡報視覺製作 ➔
                 </button>
             </div>
         </div>
 
         <!-- ==================== 第二部分：簡報視覺製作 (左右分屏) ==================== -->
-        <div id="content-part2" class="hidden bg-white p-6 md:p-8 rounded-b-2xl rounded-tr-2xl shadow-2xl border border-gray-100">
+        <div id="content-part2" class="hidden bg-white p-4 md:p-8 rounded-b-2xl rounded-tr-2xl shadow-2xl border border-gray-100">
             <!-- 教學連結按鈕區塊 -->
-            <div class="w-full mb-8 bg-blue-50 border-l-4 border-blue-500 p-6 rounded-lg shadow-md flex justify-between items-center">
+            <div class="w-full mb-8 bg-blue-50 border-l-4 border-blue-500 p-4 md:p-6 rounded-lg shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h3 class="text-lg font-bold text-blue-900 mb-2">🎓 學習如何將小組簡報完美合併！</h3>
-                    <p class="text-sm text-gray-700">想知道如何將每位同學做好的簡報無縫接合？點擊右側按鈕查看完整教學。</p>
+                    <h3 class="text-base md:text-lg font-bold text-blue-900 mb-2">🎓 學習如何將小組簡報完美合併！</h3>
+                    <p class="text-xs md:text-sm text-gray-700">想知道如何將每位同學做好的簡報無縫接合？點擊右側按鈕查看完整教學。</p>
                 </div>
-                <a href="https://winwin1109.github.io/4002-4003-ppt-combine-platform/" target="_blank" class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:from-blue-700 hover:to-indigo-700 transition transform hover:-translate-y-1 flex items-center gap-2">
+                <a href="https://winwin1109.github.io/4002-4003-ppt-combine-platform/" target="_blank" class="w-full md:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-3 px-4 md:px-6 rounded-xl shadow-lg hover:from-blue-700 hover:to-indigo-700 transition transform hover:-translate-y-1 flex items-center justify-center gap-2 text-sm md:text-base">
                     <span>📑</span> 點擊觀看簡報教學、建構完整小組簡報
                 </a>
             </div>
@@ -407,18 +422,18 @@
                 <div class="editor-panel flex flex-col relative">
                     
                     <!-- 頁面導覽列 -->
-                    <div class="flex items-center gap-3 overflow-x-auto pb-5 mb-5 border-b border-gray-200" id="slide-nav-list">
+                    <div class="flex items-center gap-2 overflow-x-auto pb-5 mb-5 border-b border-gray-200 scrollbar-hide" id="slide-nav-list">
                         <!-- 動態生成導覽按鈕 -->
                     </div>
 
                     <!-- 提示資訊區 (在簡報設計外) -->
-                    <div class="bg-yellow-50/90 border border-yellow-300 p-5 mb-3 rounded-xl shadow-sm">
-                        <p id="slide-q" class="font-bold text-yellow-900 mb-2 text-[15px] flex items-start gap-2"><span class="text-lg">🤔</span> <span>思考問題：</span></p>
-                        <p id="slide-ex" class="text-blue-800 text-[14.5px] whitespace-pre-line leading-relaxed italic font-medium mt-3 bg-white/60 p-3 rounded border border-yellow-200">💡 輔助例句：</p>
+                    <div class="bg-yellow-50/90 border border-yellow-300 p-4 md:p-5 mb-3 rounded-xl shadow-sm">
+                        <p id="slide-q" class="font-bold text-yellow-900 mb-2 text-sm md:text-[15px] flex items-start gap-2"><span class="text-lg">🤔</span> <span>思考問題：</span></p>
+                        <p id="slide-ex" class="text-blue-800 text-xs md:text-[14.5px] whitespace-pre-line leading-relaxed italic font-medium mt-3 bg-white/60 p-3 rounded border border-yellow-200">💡 輔助例句：</p>
                     </div>
 
                     <!-- 動態顯示的溫馨備註 -->
-                    <div id="slide-warm-note" class="hidden bg-emerald-50 border border-emerald-300 p-4 mb-6 rounded-xl shadow-sm text-sm text-emerald-800 font-bold flex items-center gap-2">
+                    <div id="slide-warm-note" class="hidden bg-emerald-50 border border-emerald-300 p-4 mb-6 rounded-xl shadow-sm text-xs md:text-sm text-emerald-800 font-bold flex items-center gap-2">
                         <span class="text-xl">💡</span> <span>溫馨備註：若內容包含「次分論點」，建議參考示範簡報的做法，直接將其精要地標示於相應的論據頁面上，這將幫助觀眾更清晰地掌握您的邏輯脈絡。</span>
                     </div>
 
@@ -428,40 +443,40 @@
                             <label class="text-sm font-bold text-gray-700 mb-2 block">
                                 簡報標題 (Title) <span id="slide-title-display" class="ml-2 font-black text-blue-700"></span>：
                             </label>
-                            <input type="text" id="slide-title-input" class="w-full p-3 border-2 border-gray-300 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-inner text-lg font-bold text-gray-800" placeholder="請輸入大標題..." oninput="updatePreview()">
+                            <input type="text" id="slide-title-input" class="w-full p-3 border-2 border-gray-300 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-inner text-base md:text-lg font-bold text-gray-800" placeholder="請輸入大標題..." oninput="updatePreview()">
                         </div>
                         
                         <div class="flex-grow flex flex-col">
                             <label class="text-sm font-bold text-gray-700 mb-2 block">講稿與重點內容 (點列式)：</label>
-                            <textarea id="slide-content" class="flex-grow w-full p-4 border-2 border-gray-300 rounded-xl shadow-inner outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none text-gray-800 leading-relaxed min-h-[180px] text-[15px]" placeholder="• 請輸入內容重點...\n• ..." oninput="updatePreview()"></textarea>
+                            <textarea id="slide-content" class="flex-grow w-full p-4 border-2 border-gray-300 rounded-xl shadow-inner outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none text-gray-800 leading-relaxed min-h-[180px] text-sm md:text-[15px]" placeholder="• 請輸入內容重點...\n• ..." oninput="updatePreview()"></textarea>
                         </div>
 
                         <!-- 圖片上傳控制項 -->
                         <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm mt-2">
                             <div class="flex-1 w-full">
                                 <label class="text-xs font-bold text-gray-600 block mb-2">🖼️ 上載視覺論據：</label>
-                                <input type="file" id="slide-img-input" accept="image/*" class="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer transition" onchange="previewImage(this)">
+                                <input type="file" id="slide-img-input" accept="image/*" class="w-full text-xs md:text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs md:file:text-sm file:font-bold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer transition" onchange="previewImage(this)">
                             </div>
                             <div class="w-full sm:w-1/3">
                                 <label class="text-xs font-bold text-gray-600 block mb-2">排版位置：</label>
-                                <select id="img-position" class="w-full border-2 border-gray-300 p-2.5 rounded-lg text-sm outline-none bg-white font-bold text-gray-700 focus:border-blue-500" onchange="updatePreview()">
+                                <select id="img-position" class="w-full border-2 border-gray-300 p-2 md:p-2.5 rounded-lg text-xs md:text-sm outline-none bg-white font-bold text-gray-700 focus:border-blue-500" onchange="updatePreview()">
                                     <option value="right">圖右、文左</option>
                                     <option value="left">圖左、文右</option>
                                     <option value="top">圖上、文下</option>
                                     <option value="bottom">圖下、文上</option>
                                 </select>
                             </div>
-                            <button id="remove-img-btn" class="hidden w-full sm:w-auto bg-red-100 text-red-600 border border-red-300 px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-red-200 transition shadow-sm mt-6 sm:mt-0" onclick="removeImage(event)">移除相片</button>
+                            <button id="remove-img-btn" class="hidden w-full sm:w-auto bg-red-100 text-red-600 border border-red-300 px-4 py-2 md:py-2.5 rounded-lg text-xs md:text-sm font-bold hover:bg-red-200 transition shadow-sm mt-4 sm:mt-0" onclick="removeImage(event)">移除相片</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- 右側：PPT 顯示屏與匯出 -->
                 <div class="preview-panel relative">
-                    <div class="w-full flex justify-between items-center mb-6 border-b border-gray-200 pb-4 sticky top-0 bg-[#f8fafc] z-10">
-                        <h3 class="font-black text-gray-800 text-lg flex items-center gap-2"><span class="text-2xl">🖥️</span> 完成的 PPT 顯示屏</h3>
-                        <div class="flex gap-3 items-center bg-white p-2 rounded-lg shadow-sm border border-gray-200">
-                            <select id="theme-style-selector" class="border-0 p-1 rounded text-sm outline-none font-bold text-blue-900 bg-transparent cursor-pointer" onchange="updateUITheme()">
+                    <div class="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 border-b border-gray-200 pb-4 sticky top-0 bg-[#f8fafc] z-10">
+                        <h3 class="font-black text-gray-800 text-base md:text-lg flex items-center gap-2"><span class="text-xl md:text-2xl">🖥️</span> 完成的 PPT 顯示屏</h3>
+                        <div class="flex gap-2 items-center bg-white p-1.5 md:p-2 rounded-lg shadow-sm border border-gray-200 w-full sm:w-auto overflow-x-auto">
+                            <select id="theme-style-selector" class="border-0 p-1 rounded text-xs md:text-sm outline-none font-bold text-blue-900 bg-transparent cursor-pointer" onchange="updateUITheme()">
                                 <option value="theme-office">🏢 商務專業</option>
                                 <option value="theme-edu">🏫 親和教育</option>
                                 <option value="theme-nature">🌿 綠色自然</option>
@@ -472,14 +487,14 @@
                                 <option value="theme-minimalist">🤍 留白簡約</option>
                             </select>
                             <div class="h-6 w-px bg-gray-300 mx-1"></div>
-                            <div class="flex items-center gap-1 cursor-pointer" title="自訂主色調">
+                            <div class="flex items-center gap-1 cursor-pointer whitespace-nowrap" title="自訂主色調">
                                 <label class="text-xs font-bold text-gray-600 cursor-pointer" for="theme-color">主色：</label>
-                                <input type="color" id="theme-color" value="#283593" class="w-8 h-8 border-0 rounded cursor-pointer p-0 shadow-sm" onchange="updateUITheme()">
+                                <input type="color" id="theme-color" value="#283593" class="w-6 h-6 md:w-8 md:h-8 border-0 rounded cursor-pointer p-0 shadow-sm" onchange="updateUITheme()">
                             </div>
                         </div>
                     </div>
 
-                    <!-- 即時預覽容器 (標準 960x540 比例大小) -->
+                    <!-- 即時預覽容器 (改為純響應式，不再被裁切) -->
                     <div id="ppt-preview-container" class="slide-container theme-office">
                         <div id="ppt-title" class="slide-title">標題預覽</div>
                         <div class="slide-body-wrapper" id="ppt-body-wrapper">
@@ -489,15 +504,17 @@
                     </div>
 
                     <!-- 匯出按鈕 -->
-                    <div class="mt-auto w-full pt-8 flex gap-4">
-                        <button onclick="exportPPTX()" class="flex-1 bg-gradient-to-r from-orange-400 to-red-500 text-white py-4 rounded-xl font-black shadow-xl hover:from-orange-500 hover:to-red-600 transition flex items-center justify-center transform hover:scale-105 text-lg">
-                            <span class="text-2xl mr-2">📥</span> 匯出 PPTX
+                    <div class="mt-auto w-full pt-8 flex flex-col gap-4">
+                        <button onclick="exportPPTX()" class="w-full bg-gradient-to-r from-orange-400 to-red-500 text-white py-3 md:py-4 rounded-xl font-black shadow-xl hover:from-orange-500 hover:to-red-600 transition flex items-center justify-center transform hover:scale-105 text-base md:text-lg">
+                            <span class="text-xl md:text-2xl mr-2">📥</span> 匯出 PPTX
                         </button>
-                        <button onclick="exportPDF()" class="flex-1 bg-gradient-to-r from-pink-500 to-rose-600 text-white py-4 rounded-xl font-black shadow-xl hover:from-pink-600 hover:to-rose-700 transition flex items-center justify-center transform hover:scale-105 text-lg">
-                            <span class="text-2xl mr-2">📄</span> 匯出 PDF
-                        </button>
+                        <!-- PDF 轉換教學小備註 -->
+                        <div class="bg-blue-50 border border-blue-200 p-3 rounded-lg text-xs md:text-sm text-blue-800 font-bold flex items-start gap-2 shadow-sm">
+                            <span class="text-lg mt-0.5">💡</span>
+                            <p>小提示：為了方便之後進行小組合併，請將匯出的 PPTX 檔案打開，點選「檔案」>「另存新檔」或「匯出」，選擇格式為「PDF」進行轉換。</p>
+                        </div>
                     </div>
-                     <p class="text-xs text-gray-500 mt-3 text-center font-medium">系統將自動以等比例縮放相片，確保排版完美不變形。</p>
+                     <p class="text-[10px] md:text-xs text-gray-500 mt-3 text-center font-medium">系統將自動以等比例縮放相片，確保排版完美不變形。</p>
                 </div>
 
             </div>
@@ -508,133 +525,139 @@
     <div id="modal-a60" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-content">
             <span class="modal-close" onclick="document.getElementById('modal-a60').style.display='none'">&times;</span>
-            <h2 class="text-2xl font-black text-blue-900 mb-6 border-b-2 border-blue-200 pb-3 flex items-center gap-2"><span>📋</span> 鋪排論證結構示範</h2>
+            <h2 class="text-xl md:text-2xl font-black text-blue-900 mb-6 border-b-2 border-blue-200 pb-3 flex items-center gap-2"><span>📋</span> 鋪排論證結構示範</h2>
             
-            <div class="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-inner">
+            <div class="bg-gray-50 p-4 md:p-6 rounded-xl border border-gray-200 shadow-inner">
                 <!-- 頂部流程圖 -->
                 <div class="demo-flowchart">
                     <div class="demo-box-main">
                         <div class="bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded absolute -top-3 left-4 shadow-sm">清晰的觀點</div>
-                        <strong class="text-xl text-gray-800">分論點二：中心論點</strong><br>
-                        <span class="text-gray-700 font-medium text-lg mt-1 block">九巴致力為市民提供優質服務，滿足乘客的出行需求</span>
-                        <span class="text-gray-500 text-sm mt-1 block">(從方便快捷、可靠靈活和服務安全方面證明服務優質，滿足出行需要)</span>
+                        <strong class="text-lg md:text-xl text-gray-800">分論點二：中心論點</strong><br>
+                        <span class="text-gray-700 font-medium text-base md:text-lg mt-1 block">九巴致力為市民提供優質服務，滿足乘客的出行需求</span>
+                        <span class="text-gray-500 text-xs md:text-sm mt-1 block">(從方便快捷、可靠靈活和服務安全方面證明服務優質，滿足出行需要)</span>
                     </div>
                     <div class="demo-sub-boxes mt-6">
-                        <div class="demo-box-sub demo-bg-1 text-base py-3">次分論點 1<br>九巴提供方便快捷的<br>客運服務</div>
-                        <div class="demo-box-sub demo-bg-2 text-base py-3">次分論點 2<br>九巴的班次可靠靈活</div>
-                        <div class="demo-box-sub demo-bg-3 text-base py-3">次分論點 3<br>九巴致力提升服務安全</div>
+                        <div class="demo-box-sub demo-bg-1 text-sm md:text-base py-3">次分論點 1<br>九巴提供方便快捷的<br>客運服務</div>
+                        <div class="demo-box-sub demo-bg-2 text-sm md:text-base py-3">次分論點 2<br>九巴的班次可靠靈活</div>
+                        <div class="demo-box-sub demo-bg-3 text-sm md:text-base py-3">次分論點 3<br>九巴致力提升服務安全</div>
                     </div>
                 </div>
 
                 <!-- 次分論點 1 表格 -->
                 <div class="mb-8 mt-10 relative border border-blue-200 rounded-xl overflow-hidden shadow-md">
-                    <div class="bg-blue-600 text-white p-4 flex justify-between items-center relative">
-                        <div class="absolute -left-3 top-3 bg-yellow-400 text-yellow-900 text-sm font-bold px-3 py-1 rounded z-10 shadow">有力的論據</div>
-                        <h4 class="font-bold ml-16 text-lg">次分論點 1：九巴提供方便快捷的客運服務</h4>
-                        <div class="absolute -right-3 -bottom-4 bg-yellow-400 text-yellow-900 text-sm font-bold px-3 py-1 rounded z-10 shadow">合理的論證過程</div>
+                    <div class="bg-blue-600 text-white p-4 flex flex-col md:flex-row justify-between items-start md:items-center relative gap-3">
+                        <div class="md:absolute -left-3 top-3 bg-yellow-400 text-yellow-900 text-xs md:text-sm font-bold px-3 py-1 rounded z-10 shadow inline-block">有力的論據</div>
+                        <h4 class="font-bold md:ml-16 text-base md:text-lg">次分論點 1：九巴提供方便快捷的客運服務</h4>
+                        <div class="hidden md:block absolute -right-3 -bottom-4 bg-yellow-400 text-yellow-900 text-sm font-bold px-3 py-1 rounded z-10 shadow">合理的論證過程</div>
                     </div>
-                    <table class="demo-table">
-                        <thead><tr><th width="20%">論證方向</th><th width="40%">論據</th><th width="20%">資料搜集方法</th><th width="20%">論證方法</th></tr></thead>
-                        <tbody>
-                            <tr>
-                                <td rowspan="2" class="font-bold text-gray-700 text-center bg-blue-50">覆蓋廣泛、<br>便利度最高</td>
-                                <td>1. 九巴覆蓋率達 59.8%，服務覆蓋香港各區。</td>
-                                <td class="text-center">二手資料</td>
-                                <td class="text-center">引用數據</td>
-                            </tr>
-                            <tr>
-                                <td>2. 九巴每天服務超過 220 萬人次，是其他巴士公司總服務量的 2.5 倍。</td>
-                                <td class="text-center">一手資料和二手資料</td>
-                                <td class="text-center">分析及比較數據</td>
-                            </tr>
-                            <tr>
-                                <td rowspan="3" class="font-bold text-gray-700 text-center bg-blue-50">便利市民和<br>旅客乘車</td>
-                                <td>1. 具備 16 種電子支付方式，方便市民。</td>
-                                <td class="text-center">一手資料</td>
-                                <td class="text-center">實地觀察分析</td>
-                            </tr>
-                            <tr>
-                                <td>2. 比其他巴士公司多提供 4 種信用卡支付方式，便利國際旅客。</td>
-                                <td class="text-center">一手資料和二手資料</td>
-                                <td class="text-center">分析並比較數據</td>
-                            </tr>
-                            <tr>
-                                <td>3. 國際旅客表示非常方便。</td>
-                                <td class="text-center">一手資料</td>
-                                <td class="text-center">實地訪談</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div class="overflow-x-auto">
+                        <table class="demo-table">
+                            <thead><tr><th width="20%">論證方向</th><th width="40%">論據</th><th width="20%">資料搜集方法</th><th width="20%">論證方法</th></tr></thead>
+                            <tbody>
+                                <tr>
+                                    <td rowspan="2" class="font-bold text-gray-700 text-center bg-blue-50">覆蓋廣泛、<br>便利度最高</td>
+                                    <td>1. 九巴覆蓋率達 59.8%，服務覆蓋香港各區。</td>
+                                    <td class="text-center">二手資料</td>
+                                    <td class="text-center">引用數據</td>
+                                </tr>
+                                <tr>
+                                    <td>2. 九巴每天服務超過 220 萬人次，是其他巴士公司總服務量的 2.5 倍。</td>
+                                    <td class="text-center">一手資料和二手資料</td>
+                                    <td class="text-center">分析及比較數據</td>
+                                </tr>
+                                <tr>
+                                    <td rowspan="3" class="font-bold text-gray-700 text-center bg-blue-50">便利市民和<br>旅客乘車</td>
+                                    <td>1. 具備 16 種電子支付方式，方便市民。</td>
+                                    <td class="text-center">一手資料</td>
+                                    <td class="text-center">實地觀察分析</td>
+                                </tr>
+                                <tr>
+                                    <td>2. 比其他巴士公司多提供 4 種信用卡支付方式，便利國際旅客。</td>
+                                    <td class="text-center">一手資料和二手資料</td>
+                                    <td class="text-center">分析並比較數據</td>
+                                </tr>
+                                <tr>
+                                    <td>3. 國際旅客表示非常方便。</td>
+                                    <td class="text-center">一手資料</td>
+                                    <td class="text-center">實地訪談</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- 次分論點 2 表格 -->
                 <div class="mb-8 border border-orange-200 rounded-xl overflow-hidden shadow-md">
-                    <div class="bg-orange-500 text-white p-4"><h4 class="font-bold text-lg">次分論點 2：九巴的班次可靠靈活</h4></div>
-                    <table class="demo-table">
-                        <thead><tr><th class="bg-orange-500 border-orange-600" width="20%">論證方向</th><th class="bg-orange-500 border-orange-600" width="40%">論據</th><th class="bg-orange-500 border-orange-600" width="20%">資料搜集方法</th><th class="bg-orange-500 border-orange-600" width="20%">論證方法</th></tr></thead>
-                        <tbody>
-                            <tr>
-                                <td rowspan="2" class="font-bold text-gray-700 text-center bg-orange-50">班次失誤率低，<br>市民感到滿意可靠</td>
-                                <td>1. 班次失誤率為 2.5%，服務可靠。</td>
-                                <td class="text-center">二手資料</td>
-                                <td class="text-center">引用數據</td>
-                            </tr>
-                            <tr>
-                                <td>2. 90% 的受訪者認為巴士到站時間與預定時間相符，時間合理。</td>
-                                <td class="text-center">一手資料</td>
-                                <td class="text-center">問卷調查</td>
-                            </tr>
-                            <tr>
-                                <td rowspan="2" class="font-bold text-gray-700 text-center bg-orange-50">班次靈活、<br>便利市民</td>
-                                <td>1. 節日慶典或大型活動舉行之際，九巴會安排臨時路線，配合市民外出的需要，安排靈活。</td>
-                                <td class="text-center">二手資料</td>
-                                <td class="text-center">資料篩選及分析</td>
-                            </tr>
-                            <tr>
-                                <td>2. 乘坐「大棠紅葉特別路線」的市民表示能節省乘車時間，十分方便。</td>
-                                <td class="text-center">一手資料</td>
-                                <td class="text-center">實地調查訪問</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div class="bg-orange-500 text-white p-4"><h4 class="font-bold text-base md:text-lg">次分論點 2：九巴的班次可靠靈活</h4></div>
+                    <div class="overflow-x-auto">
+                        <table class="demo-table">
+                            <thead><tr><th class="bg-orange-500 border-orange-600" width="20%">論證方向</th><th class="bg-orange-500 border-orange-600" width="40%">論據</th><th class="bg-orange-500 border-orange-600" width="20%">資料搜集方法</th><th class="bg-orange-500 border-orange-600" width="20%">論證方法</th></tr></thead>
+                            <tbody>
+                                <tr>
+                                    <td rowspan="2" class="font-bold text-gray-700 text-center bg-orange-50">班次失誤率低，<br>市民感到滿意可靠</td>
+                                    <td>1. 班次失誤率為 2.5%，服務可靠。</td>
+                                    <td class="text-center">二手資料</td>
+                                    <td class="text-center">引用數據</td>
+                                </tr>
+                                <tr>
+                                    <td>2. 90% 的受訪者認為巴士到站時間與預定時間相符，時間合理。</td>
+                                    <td class="text-center">一手資料</td>
+                                    <td class="text-center">問卷調查</td>
+                                </tr>
+                                <tr>
+                                    <td rowspan="2" class="font-bold text-gray-700 text-center bg-orange-50">班次靈活、<br>便利市民</td>
+                                    <td>1. 節日慶典或大型活動舉行之際，九巴會安排臨時路線，配合市民外出的需要，安排靈活。</td>
+                                    <td class="text-center">二手資料</td>
+                                    <td class="text-center">資料篩選及分析</td>
+                                </tr>
+                                <tr>
+                                    <td>2. 乘坐「大棠紅葉特別路線」的市民表示能節省乘車時間，十分方便。</td>
+                                    <td class="text-center">一手資料</td>
+                                    <td class="text-center">實地調查訪問</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- 次分論點 3 表格 -->
                 <div class="border border-green-200 rounded-xl overflow-hidden shadow-md">
-                    <div class="bg-green-600 text-white p-4"><h4 class="font-bold text-lg">次分論點 3：九巴致力提升服務安全</h4></div>
-                    <table class="demo-table">
-                        <thead><tr><th class="bg-green-600 border-green-700" width="20%">論證方向</th><th class="bg-green-600 border-green-700" width="40%">論據</th><th class="bg-green-600 border-green-700" width="20%">資料搜集方法</th><th class="bg-green-600 border-green-700" width="20%">論證方法</th></tr></thead>
-                        <tbody>
-                            <tr>
-                                <td rowspan="2" class="font-bold text-gray-700 text-center bg-green-50">乘車安全</td>
-                                <td>1. 引入車長駕駛反饋系統後，評分為「安全駕駛」級別的車長比例由 2020 年的 75% 提升至 2022 年的約 87%，服務更安全。</td>
-                                <td class="text-center">二手資料</td>
-                                <td class="text-center">引用數據</td>
-                            </tr>
-                            <tr>
-                                <td>2. 車隊每月平均意外率減少兩成，越趨安全。</td>
-                                <td class="text-center">二手資料</td>
-                                <td class="text-center">引用數據</td>
-                            </tr>
-                            <tr>
-                                <td rowspan="2" class="font-bold text-gray-700 text-center bg-green-50">意外率低</td>
-                                <td>1. 電子檢測系統，可防止輪胎打滑並保持車身穩定，避免發生意外。</td>
-                                <td class="text-center">二手資料</td>
-                                <td class="text-center">資料篩選分析</td>
-                            </tr>
-                            <tr>
-                                <td>2. 九巴 2022 年的事故率為每百萬行車公里 2.1 宗，低於同期整體行業平均值，服務安全。</td>
-                                <td class="text-center">一手資料和二手資料</td>
-                                <td class="text-center">分析及比較數據</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div class="bg-green-600 text-white p-4"><h4 class="font-bold text-base md:text-lg">次分論點 3：九巴致力提升服務安全</h4></div>
+                    <div class="overflow-x-auto">
+                        <table class="demo-table">
+                            <thead><tr><th class="bg-green-600 border-green-700" width="20%">論證方向</th><th class="bg-green-600 border-green-700" width="40%">論據</th><th class="bg-green-600 border-green-700" width="20%">資料搜集方法</th><th class="bg-green-600 border-green-700" width="20%">論證方法</th></tr></thead>
+                            <tbody>
+                                <tr>
+                                    <td rowspan="2" class="font-bold text-gray-700 text-center bg-green-50">乘車安全</td>
+                                    <td>1. 引入車長駕駛反饋系統後，評分為「安全駕駛」級別的車長比例由 2020 年的 75% 提升至 2022 年的約 87%，服務更安全。</td>
+                                    <td class="text-center">二手資料</td>
+                                    <td class="text-center">引用數據</td>
+                                </tr>
+                                <tr>
+                                    <td>2. 車隊每月平均意外率減少兩成，越趨安全。</td>
+                                    <td class="text-center">二手資料</td>
+                                    <td class="text-center">引用數據</td>
+                                </tr>
+                                <tr>
+                                    <td rowspan="2" class="font-bold text-gray-700 text-center bg-green-50">意外率低</td>
+                                    <td>1. 電子檢測系統，可防止輪胎打滑並保持車身穩定，避免發生意外。</td>
+                                    <td class="text-center">二手資料</td>
+                                    <td class="text-center">資料篩選分析</td>
+                                </tr>
+                                <tr>
+                                    <td>2. 九巴 2022 年的事故率為每百萬行車公里 2.1 宗，低於同期整體行業平均值，服務安全。</td>
+                                    <td class="text-center">一手資料和二手資料</td>
+                                    <td class="text-center">分析及比較數據</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 用於生成 PDF 的隱藏渲染區塊 (採用頂層固定技術確保不空白) -->
+    <!-- 用於生成 Word 的隱藏渲染區塊 -->
     <div id="pdf-render-area" class="bg-white text-black font-sans p-8 w-[800px] mx-auto hidden">
         <h1 class="text-3xl font-black text-center border-b-4 border-gray-800 pb-4 mb-6">專題研習：資料蒐集與分析報告</h1>
         
@@ -1188,10 +1211,10 @@
                     document.getElementById('args-table-container').innerHTML = `
                         <thead>
                             <tr class="bg-emerald-600 text-white">
-                                <th width="22%" class="py-3">論證方向 (次分論點)</th>
-                                <th width="38%" class="py-3">論據</th>
-                                <th width="20%" class="py-3">資料搜集方法</th>
-                                <th width="20%" class="py-3">論證方法</th>
+                                <th width="22%" class="py-3 min-w-[120px]">論證方向 (次分論點)</th>
+                                <th width="38%" class="py-3 min-w-[200px]">論據</th>
+                                <th width="20%" class="py-3 min-w-[120px]">資料搜集方法</th>
+                                <th width="20%" class="py-3 min-w-[120px]">論證方法</th>
                             </tr>
                         </thead>
                     `;
@@ -1399,7 +1422,7 @@
 
             let addText = "";
             if(tmpl === "開場介紹") addText = "【開場介紹】各位評委大家好，本集團成立逾_____年。我們是...今天向各位證明...";
-            if(tmpl === "先讚後踩") addText = "【先稱讚後批評(先讚後踩)(駁論)】誠然，有人認為...，然而我們實地調查/親身測試發現，本項目突破了局限，做到了...";
+            if(tmpl === "先讚後踩") addText = "【先稱讚後批評(先讚後踩)】誠然，有人認為...，然而我們實地調查/親身測試發現，本項目突破了局限，做到了...";
             if(tmpl === "先踩後讚") addText = "【先批評後稱讚(先踩後讚)(對比)】以往的設計/服務經常被詬病為...，但我們觀察到本項目打破常規，成功做到...";
             if(tmpl === "數據論證") addText = "【數據論證】為了客觀證明，我們進行了調查/測試。數據顯示，高達 X% 的受訪者表示...";
             if(tmpl === "段落小結") addText = "【段落小結】由此可見，以上論據確切印證了卓越的表現。接下來交給...";
@@ -1432,7 +1455,7 @@
             saveProgress();
         }
 
-        // --- 匯出功能 (WORD / PPTX / PDF) ---
+        // --- 匯出功能 (WORD / PPTX) ---
         function getFileName(suffix) {
             const cls = document.getElementById('stu-class').value || '班級';
             const grp = document.getElementById('stu-group').value || '組別';
@@ -1597,127 +1620,74 @@
 
             pptx.writeFile({ fileName: getFileName('口頭報告初稿') + '.pptx' });
         }
-
-function exportPDF() {
-    saveProgress();
-
-    // 1. 建立一個專門用於列印的隱藏容器
-    const printContainer = document.createElement('div');
-    printContainer.id = 'print-container';
-    printContainer.style.position = 'fixed';
-    printContainer.style.left = '0';
-    printContainer.style.top = '0';
-    printContainer.style.width = '100vw';
-    printContainer.style.height = '100vh';
-    printContainer.style.background = '#ffffff';
-    printContainer.style.zIndex = '999999';
-    printContainer.style.overflowY = 'auto';
-    printContainer.style.padding = '20px';
-    printContainer.style.boxSizing = 'border-box';
-
-    // 動態加入專屬的列印 CSS 樣式，確保每一頁獨立成張
-    const styleElem = document.createElement('style');
-    styleElem.innerHTML = `
-        @media print {
-            body * { visibility: hidden; }
-            #print-container, #print-container * { visibility: visible; }
-            #print-container { position: absolute; left: 0; top: 0; width: 100%; padding: 0; background: white; }
-            .print-slide { page-break-after: always; break-after: page; }
-        }
-        .print-slide {
-            width: 960px;
-            height: 540px;
-            margin: 0 auto 30px auto;
-            background: #ffffff;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 40px;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-    `;
-    printContainer.appendChild(styleElem);
-
-    // 2. 迴圈將每一張投影片的真實內容渲染進去
-    for (let i = 1; i <= totalSlides; i++) {
-        let data = slideDataStore[i] || {};
-        let titleText = data.title || getSlideTitle(i);
-        let textContent = data.text || '（學生未填寫內容草稿）';
-
-        let slideDiv = document.createElement('div');
-        slideDiv.className = 'print-slide';
-
-        let titleElem = document.createElement('h2');
-        titleElem.innerText = titleText;
-        titleElem.style.cssText = "color: #283593; font-size: 26px; font-weight: bold; margin-bottom: 20px; border-bottom: 2px solid #283593; padding-bottom: 10px;";
-
-        let bodyElem = document.createElement('div');
-        bodyElem.style.cssText = "display: flex; flex: 1; gap: 20px; overflow: hidden;";
-
-        let textElem = document.createElement('div');
-        textElem.innerText = textContent;
-        textElem.style.cssText = "font-size: 18px; line-height: 1.6; color: #333333; white-space: pre-wrap; flex: 1;";
-
-        bodyElem.appendChild(textElem);
-
-        // 如果有上傳圖片則加入
-        if (slideImages[i]) {
-            let imgElem = document.createElement('img');
-            imgElem.src = slideImages[i];
-            imgElem.style.cssText = "max-width: 350px; max-height: 300px; object-fit: contain; border-radius: 8px;";
-            bodyElem.appendChild(imgElem);
-        }
-
-        slideDiv.appendChild(titleElem);
-        slideDiv.appendChild(bodyElem);
-        printContainer.appendChild(slideDiv);
-    }
-
-    // 3. 將列印容器掛載到畫面上
-    document.body.appendChild(printContainer);
-
-    // 4. 觸發瀏覽器列印視窗
-    window.print();
-
-    // 5. 列印視窗關閉或完成後，安全移除暫時容器
-    setTimeout(() => {
-        document.body.removeChild(printContainer);
-    }, 1000);
-}
     </script>
 <!-- AI 學習夥伴教學 Modal -->
     <div id="modal-ai-helper" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-content">
             <span class="modal-close" onclick="document.getElementById('modal-ai-helper').style.display='none'">&times;</span>
-            <h2 class="text-2xl font-black text-indigo-900 mb-6 border-b-2 border-indigo-200 pb-3 flex items-center gap-2">
+            <h2 class="text-xl md:text-2xl font-black text-indigo-900 mb-6 border-b-2 border-indigo-200 pb-3 flex items-center gap-2">
                 <span>🤖</span> AI 學習夥伴：你的專題研習研究助理
             </h2>
             
             <div class="space-y-6 text-gray-700">
                 <section>
-                    <h3 class="font-bold text-lg text-indigo-800 mb-2">1. 什麼是 AI 學習夥伴？</h3>
-                    <p class="text-sm leading-relaxed bg-indigo-50 p-4 rounded-lg">
+                    <h3 class="font-bold text-base md:text-lg text-indigo-800 mb-2">1. 什麼是 AI 學習夥伴？</h3>
+                    <p class="text-xs md:text-sm leading-relaxed bg-indigo-50 p-4 rounded-lg">
                         AI 就像一位博學但偶爾會「幻覺」(胡說八道) 的研究助理。它擅長整理靈感、建議方向，但<strong>數據與事實必須由你親自核實</strong>。切記：真正的星級報告，來自於你的現場調查與親身經歷。
                     </p>
                 </section>
 
-                <section>
-                    <h3 class="font-bold text-lg text-indigo-800 mb-2">2. 黃金指示語規則 (Prompt Rules)</h3>
-                    <ul class="list-disc list-inside text-sm space-y-2 ml-2">
-                        <li><strong>設定角色：</strong>「你現在是一位正在進行專題研習的學員，研究題目是...」</li>
-                        <li><strong>定義任務：</strong>「請協助我規劃研究方向，目標是證明 [分論點]。請提供調查方向，而非直接給出論據。」</li>
-                        <li><strong>導向調查：</strong>「請建議我應該觀察哪些現象，或詢問哪些關鍵問題。」</li>
+                <section class="bg-gradient-to-br from-emerald-50 to-teal-50 p-4 rounded-xl border border-emerald-200">
+                    <h3 class="font-bold text-base md:text-lg text-emerald-900 mb-2 flex items-center gap-2"><span>💡</span> 2. 三步驟將「評審準則」化為「分論點」</h3>
+                    <p class="text-xs md:text-sm text-emerald-800 mb-3">評審準則只是一個「範疇」，必須加上「具體表現或形容詞」才能成為有說服力的分論點！</p>
+                    <ul class="space-y-2 text-xs md:text-sm text-gray-700 font-medium">
+                        <li class="bg-white p-2 md:p-3 rounded shadow-sm border border-emerald-100 leading-relaxed">
+                            <span class="bg-emerald-200 text-emerald-800 px-2 py-1 rounded text-xs font-black mr-2">Step 1</span> 
+                            <strong>確認對象與準則：</strong> 你的論證目標是 <span class="modal-target-placeholder text-indigo-600 font-bold underline">某機構</span>，負責的準則是「<span class="modal-part-placeholder text-indigo-600 font-bold underline">某準則</span>」。
+                        </li>
+                        <li class="bg-white p-2 md:p-3 rounded shadow-sm border border-emerald-100 leading-relaxed">
+                            <span class="bg-emerald-200 text-emerald-800 px-2 py-1 rounded text-xs font-black mr-2">Step 2</span> 
+                            <strong>加入具體表現/形容詞：</strong> 思考它在這方面表現如何？（例如：表現卓越、效果顯著、創新完善、遠超同儕）
+                        </li>
+                        <li class="bg-white p-2 md:p-3 rounded shadow-sm border border-emerald-100 leading-relaxed">
+                            <span class="bg-emerald-200 text-emerald-800 px-2 py-1 rounded text-xs font-black mr-2">Step 3</span> 
+                            <strong>結合成完整分論點：</strong> <span class="modal-target-placeholder text-indigo-600 font-bold">某機構</span> 在「<span class="modal-part-placeholder text-indigo-600 font-bold">某準則</span>」方面表現卓越，帶來顯著的正面影響。
+                        </li>
                     </ul>
                 </section>
 
-                <section class="bg-gradient-to-r from-orange-50 to-amber-50 p-4 rounded-xl border border-orange-200">
-                    <h3 class="font-bold text-lg text-amber-900 mb-2">3. 專屬指示語生成器範本</h3>
-                    <p class="text-xs text-amber-800 mb-3">當您在上方選好題目與評審準則後，直接複製此範本詢問 AI：</p>
-                    <div class="bg-white p-3 rounded border border-amber-200 font-mono text-xs text-gray-700 italic select-all leading-relaxed">
-                        「我現在是一位正在進行專題研習的學員，研究題目是「<span id="modal-topic-placeholder" class="text-indigo-600 font-bold">請先選擇題目</span>」。我負責的分論點是「<span id="modal-part-placeholder" class="text-indigo-600 font-bold">請先選擇準則</span>」。請協助我：1. 列出 3 個具體的調查切入點，讓我能透過『一手調查』去搜集資料。2. 針對這些調查切入點，建議我應該觀察哪些具體現象，或詢問哪些關鍵問題？3. 這些調查方向如何幫助我證明這個分論點的說服力？」
+                <section class="bg-gradient-to-r from-orange-50 to-amber-50 p-4 rounded-xl border border-orange-200 mt-4">
+                    <h3 class="font-bold text-base md:text-lg text-amber-900 mb-2">3. 專屬指示語生成器範本 (共 3 款)</h3>
+                    <p class="text-xs md:text-sm text-amber-800 mb-3">請套用「設定角色 ➔ 定義任務 ➔ 導向調查」的框架，從以下 3 款範本中選擇適合的複製給 AI，學以致用：</p>
+                    
+                    <div class="grid grid-cols-1 gap-4 max-h-[50vh] overflow-y-auto pr-2">
+                        <!-- 範本 1 -->
+                        <div class="bg-white p-4 rounded-lg border border-amber-300 shadow-sm relative pt-8">
+                            <span class="absolute top-0 right-0 bg-amber-200 text-amber-900 text-[10px] md:text-xs px-2 py-1 rounded-bl-lg font-bold">1. 實地考察與一手資料</span>
+                            <p class="font-mono text-xs md:text-sm text-gray-700 select-all leading-relaxed">
+                                【設定角色】我正在進行專題研習，題目是『<span class="modal-topic-placeholder text-indigo-600 font-bold">請先選擇題目</span>』，負責的分論點是：<span class="modal-target-placeholder text-indigo-600 font-bold">目標</span>在......<span class="modal-part-placeholder text-indigo-600 font-bold">請先選擇準則</span>......表現卓越。<br><br>
+                                【定義任務】請幫我規劃『實地考察』的調查方向，以搜集一手資料來證明這個分論點。<br><br>
+                                【導向調查】請建議我應該去哪些真實地點？以及在現場我應該具體量度、計算或觀察哪些客觀現象與數據指標？
+                            </p>
+                        </div>
+                        <!-- 範本 2 -->
+                        <div class="bg-white p-4 rounded-lg border border-amber-300 shadow-sm relative pt-8">
+                            <span class="absolute top-0 right-0 bg-amber-200 text-amber-900 text-[10px] md:text-xs px-2 py-1 rounded-bl-lg font-bold">2. 二手資料與比較分析</span>
+                            <p class="font-mono text-xs md:text-sm text-gray-700 select-all leading-relaxed">
+                                【設定角色】我正在進行專題研習，題目是『<span class="modal-topic-placeholder text-indigo-600 font-bold">請先選擇題目</span>』，負責的分論點是：<span class="modal-target-placeholder text-indigo-600 font-bold">目標</span>在......<span class="modal-part-placeholder text-indigo-600 font-bold">請先選擇準則</span>......表現卓越。<br><br>
+                                【定義任務】請幫我規劃『二手資料』的搜尋與比較分析方向，以加強論證說服力。<br><br>
+                                【導向調查】請提供 3 個搜尋方向（例如政府報告、權威期刊），並建議我可以用哪一兩個行業對手作為比較對象，對比哪些客觀指標？
+                            </p>
+                        </div>
+                        <!-- 範本 3 -->
+                        <div class="bg-white p-4 rounded-lg border border-amber-300 shadow-sm relative pt-8">
+                            <span class="absolute top-0 right-0 bg-amber-200 text-amber-900 text-[10px] md:text-xs px-2 py-1 rounded-bl-lg font-bold">3. 問卷訪談與調查方向</span>
+                            <p class="font-mono text-xs md:text-sm text-gray-700 select-all leading-relaxed">
+                                【設定角色】我正在進行專題研習，題目是『<span class="modal-topic-placeholder text-indigo-600 font-bold">請先選擇題目</span>』，負責的分論點是：<span class="modal-target-placeholder text-indigo-600 font-bold">目標</span>在......<span class="modal-part-placeholder text-indigo-600 font-bold">請先選擇準則</span>......表現卓越。<br><br>
+                                【定義任務】我打算親自進行問卷調查與人物訪談來搜集一手資料。<br><br>
+                                【導向調查】請建議我最合適的受訪對象是誰？並指出我應該針對哪些「具體面向」或「核心議題」來進行調查？請提供 3 個重點方向，以引導我自己設計問卷及訪談大綱。
+                            </p>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -1725,17 +1695,22 @@ function exportPDF() {
     </div>
 
     <script>
-    // 開啟 AI 學習夥伴視窗並自動代入學生當前選擇的題目與分論點
+    // 開啟 AI 學習夥伴視窗並自動代入學生當前選擇的題目、準則與論證對象
     function openAIHelperModal() {
         const modal = document.getElementById('modal-ai-helper');
-        const topicPlaceholder = document.getElementById('modal-topic-placeholder');
-        const partPlaceholder = document.getElementById('modal-part-placeholder');
+        
+        // 使用 querySelectorAll 一次性更新所有範本內的選項
+        const topicPlaceholders = document.querySelectorAll('.modal-topic-placeholder');
+        const partPlaceholders = document.querySelectorAll('.modal-part-placeholder');
+        const targetPlaceholders = document.querySelectorAll('.modal-target-placeholder');
         
         const selectedTopic = currentTopicObj ? currentTopicObj.title : "請先回到步驟一選擇題目";
         const selectedPart = document.getElementById('stu-part').value || "請先填寫分論點";
+        const selectedTarget = document.getElementById('stu-target').value || "目標對象";
         
-        topicPlaceholder.innerText = selectedTopic;
-        partPlaceholder.innerText = selectedPart;
+        topicPlaceholders.forEach(el => el.innerText = selectedTopic);
+        partPlaceholders.forEach(el => el.innerText = selectedPart);
+        targetPlaceholders.forEach(el => el.innerText = selectedTarget);
         
         modal.style.display = 'flex';
     }
