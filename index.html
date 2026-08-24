@@ -5,14 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>專題研習口頭報告初稿製作平台</title>
     
-    <!-- ================= 新增：PWA 相關設定 ================= -->
+    <!-- PWA 相關設定 -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1e3a8a">
     <link rel="apple-touch-icon" href="icon-192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="PBL">
-    <!-- ======================================================== -->
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -59,7 +58,7 @@
             .preview-panel { padding: 25px; position: sticky; top: 80px; height: calc(100vh - 100px); }
         }
         
-        /* 簡報顯示屏樣式 (改為全響應式 16:9 比例，自動縮放防裁切) */
+        /* 簡報顯示屏樣式 */
         .slide-container { 
             width: 100%; max-width: 960px; aspect-ratio: 16 / 9; container-type: inline-size; 
             position: relative; padding: 5%; box-sizing: border-box; display: flex; flex-direction: column; 
@@ -272,10 +271,10 @@
                 <div class="bg-gradient-to-br from-gray-50 to-white p-4 md:p-6 rounded-2xl border border-gray-200 shadow-sm">
                     <h3 class="text-lg md:text-xl font-black mb-4 flex items-center text-gray-800"><span class="bg-blue-600 text-white w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center mr-3 shadow-md text-sm">1</span> 選擇 AI 輔助平台</h3>
                     
-                    <!-- 移至此處：啟動 AI 夥伴按鈕 -->
+                    <!-- 啟動 AI 夥伴按鈕 -->
                     <div class="mb-5">
                         <button onclick="openAIHelperModal()" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-indigo-700 transition transform hover:-translate-y-1 flex justify-center items-center gap-2">
-                            <span>🤖</span> 啟動「AI 學習夥伴」教學
+                            <span>🤖</span> 啟怒「AI 學習夥伴」教學
                         </button>
                         <p class="text-xs md:text-sm text-gray-500 mt-3 font-medium">請先點擊上方按鈕簡單了解 AI 協助方法與複製範本，再於小組內分工使用不同平台，點擊「前往」可直接開新視窗。</p>
                     </div>
@@ -435,7 +434,7 @@
 
         <!-- ==================== 第二部分：簡報視覺製作 (左右分屏) ==================== -->
         <div id="content-part2" class="hidden bg-white p-4 md:p-8 rounded-b-2xl rounded-tr-2xl shadow-2xl border border-gray-100">
-            <!-- 教學連結按鈕區塊 (已加入教師鎖定按鍵) -->
+            <!-- 教學連結按鈕區塊 -->
             <div class="w-full mb-8 bg-blue-50 border-l-4 border-blue-500 p-4 md:p-6 rounded-lg shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h3 class="text-base md:text-lg font-bold text-blue-900 mb-2">🎓 學習如何將小組簡報完美合併！</h3>
@@ -460,13 +459,13 @@
                         <!-- 動態生成導覽按鈕 -->
                     </div>
 
-                    <!-- 提示資訊區 (在簡報設計外) -->
+                    <!-- 提示資訊區 -->
                     <div class="bg-yellow-50/90 border border-yellow-300 p-4 md:p-5 mb-3 rounded-xl shadow-sm">
                         <p id="slide-q" class="font-bold text-yellow-900 mb-2 text-sm md:text-[15px] flex items-start gap-2"><span class="text-lg">🤔</span> <span>思考問題：</span></p>
                         <p id="slide-ex" class="text-blue-800 text-xs md:text-[14.5px] whitespace-pre-line leading-relaxed italic font-medium mt-3 bg-white/60 p-3 rounded border border-yellow-200">💡 輔助例句：</p>
                     </div>
 
-                    <!-- 動態顯示的溫馨備註 -->
+                    <!-- 溫馨備註 -->
                     <div id="slide-warm-note" class="hidden bg-emerald-50 border border-emerald-300 p-4 mb-6 rounded-xl shadow-sm text-xs md:text-sm text-emerald-800 font-bold flex items-center gap-2">
                         <span class="text-xl">💡</span> <span>溫馨備註：若內容包含「次分論點」，建議參考示範簡報的做法，直接將其精要地標示於相應的論據頁面上，這將幫助觀眾更清晰地掌握您的邏輯脈絡。</span>
                     </div>
@@ -528,7 +527,7 @@
                         </div>
                     </div>
 
-                    <!-- 即時預覽容器 (改為純響應式，不再被裁切) -->
+                    <!-- 即時預覽容器 -->
                     <div id="ppt-preview-container" class="slide-container theme-office">
                         <div id="ppt-title" class="slide-title">標題預覽</div>
                         <div class="slide-body-wrapper" id="ppt-body-wrapper">
@@ -542,7 +541,6 @@
                         <button onclick="exportPPTX()" class="w-full bg-gradient-to-r from-orange-400 to-red-500 text-white py-3 md:py-4 rounded-xl font-black shadow-xl hover:from-orange-500 hover:to-red-600 transition flex items-center justify-center transform hover:scale-105 text-base md:text-lg">
                             <span class="text-xl md:text-2xl mr-2">📥</span> 匯出 PPTX
                         </button>
-                        <!-- PDF 轉換教學小備註 -->
                         <div class="bg-blue-50 border border-blue-200 p-3 rounded-lg text-xs md:text-sm text-blue-800 font-bold flex items-start gap-2 shadow-sm">
                             <span class="text-lg mt-0.5">💡</span>
                             <p>小提示：為了方便之後進行小組合併，請將匯出的 PPTX 檔案打開，點選「檔案」>「另存新檔」或「匯出」，選擇格式為「PDF」進行轉換。</p>
@@ -550,19 +548,18 @@
                     </div>
                      <p class="text-[10px] md:text-xs text-gray-500 mt-3 text-center font-medium">系統將自動以等比例縮放相片，確保排版完美不變形。</p>
                 </div>
-
             </div>
         </div>
     </div>
 
     <!-- 隱藏的 鋪排論證結構示範 彈出視窗 -->
     <div id="modal-a60" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+        <!-- ...(內容維持不變)... -->
         <div class="modal-content">
             <span class="modal-close" onclick="document.getElementById('modal-a60').style.display='none'">&times;</span>
             <h2 class="text-xl md:text-2xl font-black text-blue-900 mb-6 border-b-2 border-blue-200 pb-3 flex items-center gap-2"><span>📋</span> 鋪排論證結構示範</h2>
             
             <div class="bg-gray-50 p-4 md:p-6 rounded-xl border border-gray-200 shadow-inner">
-                <!-- 頂部流程圖 -->
                 <div class="demo-flowchart">
                     <div class="demo-box-main">
                         <div class="bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded absolute -top-3 left-4 shadow-sm">清晰的觀點</div>
@@ -577,7 +574,6 @@
                     </div>
                 </div>
 
-                <!-- 次分論點 1 表格 -->
                 <div class="mb-8 mt-10 relative border border-blue-200 rounded-xl overflow-hidden shadow-md">
                     <div class="bg-blue-600 text-white p-4 flex flex-col md:flex-row justify-between items-start md:items-center relative gap-3">
                         <div class="md:absolute -left-3 top-3 bg-yellow-400 text-yellow-900 text-xs md:text-sm font-bold px-3 py-1 rounded z-10 shadow inline-block">有力的論據</div>
@@ -620,7 +616,6 @@
                     </div>
                 </div>
 
-                <!-- 次分論點 2 表格 -->
                 <div class="mb-8 border border-orange-200 rounded-xl overflow-hidden shadow-md">
                     <div class="bg-orange-500 text-white p-4"><h4 class="font-bold text-base md:text-lg">次分論點 2：九巴的班次可靠靈活</h4></div>
                     <div class="overflow-x-auto">
@@ -654,7 +649,6 @@
                     </div>
                 </div>
 
-                <!-- 次分論點 3 表格 -->
                 <div class="border border-green-200 rounded-xl overflow-hidden shadow-md">
                     <div class="bg-green-600 text-white p-4"><h4 class="font-bold text-base md:text-lg">次分論點 3：九巴致力提升服務安全</h4></div>
                     <div class="overflow-x-auto">
@@ -761,7 +755,6 @@
 
     <!-- ===== JavaScript 核心邏輯 ===== -->
     <script>
-        // ----------------- 核心資料庫 (根據9大範文深度定制引導問題，並加入全新學科題目) -----------------
         const topicsList = [
             { id: 't1', title: '香港名牌選舉', cat: '工商管理', opts: ['知名度', '經營特色', '創新意念', '品質形象', '環保及社會責任', '其他'],
               guides: [
@@ -955,16 +948,14 @@
             }
         ];
 
-        // --- 全域變數 ---
         let currentTopicObj = null;
         let currentSlideIdx = 1;
         let argDirCount = 2; 
-        let evCount = { 1: 2, 2: 2 }; // 記錄每個方向(次分論點)擁有多少個論據列
+        let evCount = { 1: 2, 2: 2 }; 
         let slideDataStore = { 1:{}, 2:{}, 3:{}, 4:{}, 5:{} };
         let slideImages = {}; 
-        let totalSlides = 5; // 預設 5 頁：分論點, 論據1, 論據2, 論據3, 總結
+        let totalSlides = 5; 
 
-        // --- 初始化頁面 ---
         window.onload = () => {
             const grid = document.getElementById('topic-grid');
             topicsList.forEach(t => {
@@ -990,7 +981,6 @@
                 grid.appendChild(btn);
             });
 
-            // 初始化「篩選整合」6列左右對照表
             const filteredList = document.getElementById('ai-filtered-list');
             for(let i=1; i<=6; i++) {
                 filteredList.innerHTML += `
@@ -1007,7 +997,6 @@
                 `;
             }
 
-            // 嘗試載入本機進度
             loadProgress();
         };
 
@@ -1021,7 +1010,6 @@
             document.getElementById('modal-a60').style.display = 'flex';
         }
 
-        // 動態生成論據列 HTML (第一部分表格)
         function createEvidenceRowHTML(dirId, evIdx) {
              const badgeColors = ['text-blue-300', 'text-orange-300', 'text-purple-400', 'text-pink-400', 'text-yellow-400', 'text-teal-400'];
              const focusColors = ['focus:border-blue-500', 'focus:border-orange-500', 'focus:border-purple-500', 'focus:border-pink-500', 'focus:border-yellow-500', 'focus:border-teal-500'];
@@ -1043,7 +1031,6 @@
              return tr;
         }
 
-        // 為某個次分論點動態增加一個新的論據列
         function addEvidenceRow(dirId, skipIncrement = false) {
             if(!evCount[dirId]) evCount[dirId] = 2;
             if(!skipIncrement) { evCount[dirId]++; }
@@ -1051,13 +1038,12 @@
             let evIdx = skipIncrement ? document.querySelectorAll(`[id^='tr-ev-${dirId}-']`).length + 1 : evCount[dirId];
             let tbody = document.getElementById(`tbody-${dirId}`);
             let tdDir = document.getElementById(`td-dir-${dirId}`);
-            if(tdDir) tdDir.rowSpan = evIdx; // 更新大標題跨越的行數
+            if(tdDir) tdDir.rowSpan = evIdx; 
             
             tbody.appendChild(createEvidenceRowHTML(dirId, evIdx));
             if(!skipIncrement) saveProgress();
         }
 
-        // 動態新增一整個論證方向大區塊
         function addArgDirection(skipDefaultRows = false) {
             argDirCount++;
             if(!evCount[argDirCount]) evCount[argDirCount] = 2;
@@ -1075,7 +1061,6 @@
 
             let countToCreate = skipDefaultRows ? evCount[argDirCount] : 2;
 
-            // 建立首行 (含合併的論證方向框)
             let tr1 = document.createElement('tr');
             tr1.id = `tr-ev-${argDirCount}-1`;
             tr1.innerHTML = `
@@ -1085,14 +1070,12 @@
                     <button onclick="removeArgDirection(${argDirCount})" class="absolute top-1 right-1 text-red-500 bg-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 shadow transition hover:bg-red-500 hover:text-white" title="刪除此列">×</button>
                 </td>
             `;
-            // 加入第一個論據的內容 (復用 createEvidenceRowHTML 並提取裡面的 td)
             let row1HTML = createEvidenceRowHTML(argDirCount, 1).innerHTML;
             tr1.innerHTML += row1HTML;
             tbody.appendChild(tr1);
             
             document.getElementById('args-table-container').appendChild(tbody);
 
-            // 建立後續預設行
             for(let j=2; j<=countToCreate; j++) {
                 tbody.appendChild(createEvidenceRowHTML(argDirCount, j));
             }
@@ -1110,6 +1093,7 @@
             }
         }
 
+        // ================= 重點修復 2：進入時加上 true 參數 =================
         function enterWorkspace() {
             if(!currentTopicObj) { alert("請先在步驟一選擇一個專題研習題目！"); return; }
             const stuClass = document.getElementById('stu-class').value;
@@ -1122,7 +1106,6 @@
                 alert("請完整填寫步驟二的學生基本資料及選擇分論點！"); return;
             }
 
-            // 更新指示語的論證目標代入，並保留學生可自行填寫的空白位
             document.getElementById('ai-structure-hint').innerHTML = `💡 指示語參考：請向 AI 輸入「我們正在策劃一份關於『${currentTopicObj.title}』的報告，請針對......(論證目標對象)在『${stuPart}』這個評審標準，提供 3 至 4 個能證明其優勢的具體論證方向。」`;
 
             document.getElementById('view-home').classList.add('hidden');
@@ -1134,9 +1117,12 @@
 
             switchMainTab('part1');
             buildSlideNav();
-            openSlide(1);
+            
+            // 加入 true，告訴 openSlide 這是第一次載入，千萬不要儲存空白內容！
+            openSlide(1, true); 
             saveProgress(); 
         }
+        // =================================================================
 
         function switchMainTab(tab) {
             const btn1 = document.getElementById('tab-part1');
@@ -1170,7 +1156,6 @@
 
         function checkPart1AndGoPart2() { switchMainTab('part2'); }
 
-        // --- 本機儲存進度功能 ---
         function saveProgress() {
             const inputIds = ['stu-class', 'stu-group', 'stu-id', 'stu-name', 'stu-target', 'stu-part'];
             let formData = {};
@@ -1240,7 +1225,6 @@
                         }
                     }
                     
-                    // 恢復動態表格架構
                     argDirCount = 0;
                     document.getElementById('args-table-container').innerHTML = `
                         <thead>
@@ -1283,7 +1267,6 @@
             }
         }
 
-        // --- 即時預覽與風格更新邏輯 ---
         function updateUITheme() {
             const previewContainer = document.getElementById('ppt-preview-container');
             const style = document.getElementById('theme-style-selector').value;
@@ -1329,7 +1312,6 @@
             }
         }
 
-        // --- 簡報編輯器邏輯 (動態頁面) ---
         function getSlideTitle(index) {
             if (index === 1) return "指出分論點";
             if (index === 2) return "論據一";
@@ -1376,8 +1358,13 @@
             saveProgress();
         }
 
-        function openSlide(num) {
-            saveCurrentSlide();
+        // ================= 重點修復 1：增加 skipSave 參數 =================
+        function openSlide(num, skipSave = false) {
+            // 如果不是第一次載入，才執行存檔
+            if (!skipSave) {
+                saveCurrentSlide();
+            }
+            
             currentSlideIdx = num;
 
             document.querySelectorAll('#slide-nav-list button:not(.text-emerald-600)').forEach(b => {
@@ -1437,34 +1424,13 @@
             document.getElementById('slide-img-input').value = "";
             updateUITheme();
         }
+        // =================================================================
 
         function saveCurrentSlide() {
             let title = document.getElementById('slide-title-input') ? document.getElementById('slide-title-input').value : "";
             let text = document.getElementById('slide-content') ? document.getElementById('slide-content').value : "";
             let imgPos = document.getElementById('img-position') ? document.getElementById('img-position').value : "right";
             slideDataStore[currentSlideIdx] = { title, text, imgPos };
-        }
-
-        function applyTemplate() {
-            let tmplElem = document.getElementById('sentence-template');
-            if(!tmplElem) return;
-            let tmpl = tmplElem.value;
-            if(!tmpl) return;
-            let textArea = document.getElementById('slide-content');
-            let currentText = textArea.value;
-            if(currentText && !currentText.endsWith('\n')) currentText += '\n';
-
-            let addText = "";
-            if(tmpl === "開場介紹") addText = "【開場介紹】各位評委大家好，本集團成立逾_____年。我們是...今天向各位證明...";
-            if(tmpl === "先讚後踩") addText = "【先稱讚後批評(先讚後踩)】誠然，有人認為...，然而我們實地調查/親身測試發現，本項目突破了局限，做到了...";
-            if(tmpl === "先踩後讚") addText = "【先批評後稱讚(先踩後讚)(對比)】以往的設計/服務經常被詬病為...，但我們觀察到本項目打破常規，成功做到...";
-            if(tmpl === "數據論證") addText = "【數據論證】為了客觀證明，我們進行了調查/測試。數據顯示，高達 X% 的受訪者表示...";
-            if(tmpl === "段落小結") addText = "【段落小結】由此可見，以上論據確切印證了卓越的表現。接下來交給...";
-            
-            textArea.value = currentText + addText;
-            tmplElem.value = "";
-            updatePreview();
-            saveProgress();
         }
 
         function previewImage(input) {
@@ -1489,7 +1455,6 @@
             saveProgress();
         }
 
-        // --- 匯出功能 (WORD / PPTX) ---
         function getFileName(suffix) {
             const cls = document.getElementById('stu-class').value || '班級';
             const grp = document.getElementById('stu-group').value || '組別';
@@ -1625,7 +1590,6 @@
                 let textArr = rawText.split('\n').filter(t => t.trim() !== '').map(t => ({ text: t, options: { breakLine: true, bullet: t.trim().startsWith('•') } }));
                 if(textArr.length === 0) textArr = [{ text: "（學生未填寫內容草稿）" }];
 
-                // 恢復標準比例的坐標與寬高
                 let textOpts = { 
                     x: 0.5, y: 1.6, w: 9.0, h: 3.6, 
                     fontSize: 18, color: fontColor, fontFace: fontFace, valign: "top", bullet: true
@@ -1655,7 +1619,6 @@
             pptx.writeFile({ fileName: getFileName('口頭報告初稿') + '.pptx' });
         }
 
-        // --- 教師鎖定功能邏輯 ---
         function checkTeacherLock() {
             if(!currentTopicObj) {
                 alert("請先在步驟一選擇一個專題研習題目，並進入製作空間！");
@@ -1696,7 +1659,6 @@
             }
         }
         
-        // ================= 新增：PWA Service Worker 註冊 =================
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
@@ -1708,7 +1670,6 @@
                     });
             });
         }
-        // =================================================================
     </script>
 <!-- AI 學習夥伴教學 Modal -->
     <div id="modal-ai-helper" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
@@ -1784,11 +1745,9 @@
     </div>
 
     <script>
-    // 開啟 AI 學習夥伴視窗並自動代入學生當前選擇的題目、準則與論證對象
     function openAIHelperModal() {
         const modal = document.getElementById('modal-ai-helper');
         
-        // 使用 querySelectorAll 一次性更新所有範本內的選項
         const topicPlaceholders = document.querySelectorAll('.modal-topic-placeholder');
         const partPlaceholders = document.querySelectorAll('.modal-part-placeholder');
         const targetPlaceholders = document.querySelectorAll('.modal-target-placeholder');
