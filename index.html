@@ -4,6 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>專題研習口頭報告初稿製作平台</title>
+    
+    <!-- ================= 新增：PWA 相關設定 ================= -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e3a8a">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="PBL">
+    <!-- ======================================================== -->
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- PptxGenJS -->
@@ -350,7 +360,7 @@
                 </div>
             </div>
 
-            <!-- ================= 新增：研習知識庫框格 ================= -->
+            <!-- 研習知識庫框格 -->
             <div class="bg-gradient-to-br from-purple-50 to-fuchsia-50 p-4 md:p-6 rounded-2xl border-2 border-purple-300 mb-8 shadow-sm">
                 <h3 class="text-base md:text-lg font-black text-purple-900 mb-4 border-l-8 border-purple-600 pl-3">研習知識庫</h3>
                 <p class="text-sm text-purple-800 font-bold mb-4 flex items-center gap-2">
@@ -368,7 +378,6 @@
                     </a>
                 </div>
             </div>
-            <!-- ======================================================== -->
 
             <!-- 3. 論證結構表格 (動態新增) -->
             <div class="bg-gradient-to-br from-emerald-50 to-green-50 p-4 md:p-6 rounded-2xl border-2 border-emerald-300 mb-8 relative shadow-md">
@@ -1686,6 +1695,20 @@
                 alert("密碼錯誤，無法解鎖！");
             }
         }
+        
+        // ================= 新增：PWA Service Worker 註冊 =================
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => {
+                        console.log('PWA ServiceWorker 註冊成功，範圍為: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.log('PWA ServiceWorker 註冊失敗: ', err);
+                    });
+            });
+        }
+        // =================================================================
     </script>
 <!-- AI 學習夥伴教學 Modal -->
     <div id="modal-ai-helper" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
