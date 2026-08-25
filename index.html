@@ -136,6 +136,18 @@
         </div>
     </nav>
 
+    <!-- PWA 下載/安裝浮動按鍵 (預設隱藏) -->
+    <button id="pwa-install-btn" class="hidden fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-pink-500 to-rose-500 text-white px-6 py-3 rounded-full shadow-2xl font-black z-[9999] flex items-center gap-2 animate-bounce hover:scale-105 transition">
+        <span class="text-2xl">📱</span> 下載此應用程式至手機
+    </button>
+
+    <!-- iOS 安裝提示 (預設隱藏) -->
+    <div id="ios-install-prompt" class="hidden fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-white text-gray-800 px-6 py-4 rounded-2xl shadow-2xl z-[9999] border-t-4 border-blue-500 text-center w-[90%] max-w-sm">
+        <p class="text-sm font-bold mb-2">📥 安裝此應用程式</p>
+        <p class="text-xs text-gray-600">iOS 用戶請點擊下方工具列的 <span class="text-xl">⏍</span> (分享) 圖示，然後選擇<br><strong>「加入主畫面」</strong>。</p>
+        <button onclick="document.getElementById('ios-install-prompt').classList.add('hidden')" class="mt-3 bg-gray-100 text-gray-700 px-4 py-1 rounded-full text-xs font-bold hover:bg-gray-200">我知道了</button>
+    </div>
+
     <!-- 浮動儲存按鈕 -->
     <div class="floating-save-btn" onclick="saveProgress()">
         <span class="text-xl md:text-2xl">💾</span> <span class="hidden md:inline">儲存進度</span>
@@ -274,7 +286,7 @@
                     <!-- 啟動 AI 夥伴按鈕 -->
                     <div class="mb-5">
                         <button onclick="openAIHelperModal()" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-indigo-700 transition transform hover:-translate-y-1 flex justify-center items-center gap-2">
-                            <span>🤖</span> 啟怒「AI 學習夥伴」教學
+                            <span>🤖</span> 啟動「AI 學習夥伴」教學
                         </button>
                         <p class="text-xs md:text-sm text-gray-500 mt-3 font-medium">請先點擊上方按鈕簡單了解 AI 協助方法與複製範本，再於小組內分工使用不同平台，點擊「前往」可直接開新視窗。</p>
                     </div>
@@ -1093,7 +1105,6 @@
             }
         }
 
-        // ================= 重點修復 2：進入時加上 true 參數 =================
         function enterWorkspace() {
             if(!currentTopicObj) { alert("請先在步驟一選擇一個專題研習題目！"); return; }
             const stuClass = document.getElementById('stu-class').value;
@@ -1118,11 +1129,9 @@
             switchMainTab('part1');
             buildSlideNav();
             
-            // 加入 true，告訴 openSlide 這是第一次載入，千萬不要儲存空白內容！
             openSlide(1, true); 
             saveProgress(); 
         }
-        // =================================================================
 
         function switchMainTab(tab) {
             const btn1 = document.getElementById('tab-part1');
@@ -1358,9 +1367,7 @@
             saveProgress();
         }
 
-        // ================= 重點修復 1：增加 skipSave 參數 =================
         function openSlide(num, skipSave = false) {
-            // 如果不是第一次載入，才執行存檔
             if (!skipSave) {
                 saveCurrentSlide();
             }
@@ -1424,7 +1431,6 @@
             document.getElementById('slide-img-input').value = "";
             updateUITheme();
         }
-        // =================================================================
 
         function saveCurrentSlide() {
             let title = document.getElementById('slide-title-input') ? document.getElementById('slide-title-input').value : "";
@@ -1670,6 +1676,47 @@
                     });
             });
         }
+
+        // --- PWA 安裝邏輯開始 ---
+        let deferredPrompt;
+        const installBtn = document.getElementById('pwa-install-btn');
+        const iosPrompt = document.getElementById('ios-install-prompt');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.classList.remove('hidden');
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt !== null) {
+                installBtn.classList.add('hidden');
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`同學對安裝提示的回應: ${outcome}`);
+                deferredPrompt = null;
+            }
+        });
+
+        window.addEventListener('appinstalled', () => {
+            installBtn.classList.add('hidden');
+            deferredPrompt = null;
+            console.log('應用程式已成功安裝');
+        });
+
+        // 偵測是否為 iOS Safari，並顯示專屬提示
+        const isIos = () => {
+            const userAgent = window.navigator.userAgent.toLowerCase();
+            return /iphone|ipad|ipod/.test(userAgent);
+        };
+        const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
+
+        if (isIos() && !isInStandaloneMode()) {
+            setTimeout(() => {
+                iosPrompt.classList.remove('hidden');
+            }, 3000); // 延遲 3 秒後顯示提示
+        }
+        // --- PWA 安裝邏輯結束 ---
     </script>
 <!-- AI 學習夥伴教學 Modal -->
     <div id="modal-ai-helper" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">

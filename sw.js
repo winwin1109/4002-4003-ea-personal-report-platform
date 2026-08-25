@@ -1,6 +1,6 @@
-// 這裡是你控制版本的開關！每次更新 index.html，就把這裡的 v1 改成 v2, v3, v4...
-const CACHE_NAME = 'pbl-platform-v1'; 
+const CACHE_NAME = 'pbl-app-cache-v1';
 
+// 這裡列出需要預先下載並儲存在手機裡的檔案
 const urlsToCache = [
   './',
   './index.html',
@@ -9,41 +9,56 @@ const urlsToCache = [
   './icon-512.png'
 ];
 
-// 1. 安裝時：將指定的檔案存入快取
+// 1. 安裝階段：將核心資源加入快取
 self.addEventListener('install', event => {
-  self.skipWaiting(); // 強制立刻接管，不等待舊版關閉
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
+        console.log('快取已開啟');
         return cache.addAll(urlsToCache);
       })
   );
+  // 強制立即接管控制，不用等舊版 Service Worker 停用
+  self.skipWaiting();
 });
 
-// 2. 啟動時：清除舊版本的快取 (這是自動更新的關鍵！)
+// 2. 啟動階段：清理舊版本的快取，確保學生拿到最新版
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          // 如果快取名稱跟目前的版本號不同，就刪除舊的
           if (cacheName !== CACHE_NAME) {
-            console.log('清除舊快取:', cacheName);
+            console.log('刪除舊版快取:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     })
   );
-  return self.clients.claim(); // 確保新的 Service Worker 立刻控制所有頁面
+  self.clients.claim();
 });
 
-// 3. 攔截請求：先找快取，沒有再透過網路抓取
+// 3. 攔截請求：網路優先 (Network First)，若斷網則退回使用快取 (Cache Fallback)
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        return response || fetch(event.request);
-      })
-  );
+  // 針對 HTTP/HTTPS 請求進行攔截
+  if (event.request.url.startsWith('http')) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          // 如果連線成功，就把最新抓到的資源同步更新到快取中
+          if (response && response.status === 200 && response.type === 'basic') {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // 如果斷網 (fetch 失敗)，就從手機快取裡找出備用檔案
+          return caches.match(event.request);
+        })
+    );
+  }
 });

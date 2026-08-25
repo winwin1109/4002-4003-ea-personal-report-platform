@@ -1,7 +1,8 @@
 {
-  "name": "PBL專題報告平台",
-  "short_name": "PBL",
-  "start_url": "./",
+  "name": "專題研習口頭報告初稿製作平台",
+  "short_name": "PBL初稿",
+  "description": "協助學生進行專題研習、資料蒐集與簡報初稿製作的教學平台",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#fdfbfb",
   "theme_color": "#1e3a8a",
