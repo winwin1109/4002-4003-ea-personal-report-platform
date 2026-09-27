@@ -271,11 +271,11 @@
 
         <!-- 模塊切換 Tabs -->
         <div class="flex border-b-4 border-gray-200 mb-6 md:mb-8 px-2 md:px-4 gap-1 md:gap-2 overflow-x-auto">
-            <button onclick="switchMainTab('part1')" id="tab-part1" class="tab-btn active px-4 py-3 md:px-10 md:py-4 text-sm md:text-xl rounded-t-xl md:rounded-t-2xl bg-white border-t-2 border-l-2 border-r-2 border-gray-200 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] transition-all whitespace-nowrap">📝 第一部分：資料蒐集與論證結構</button>
+            <button onclick="switchMainTab('part1')" id="tab-part1" class="tab-btn active px-4 py-3 md:px-10 md:py-4 text-sm md:text-xl rounded-t-xl md:rounded-t-2xl bg-white border-t-2 border-l-2 border-r-2 border-gray-200 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] transition-all whitespace-nowrap">📝 第一部分：資料搜集與論證結構</button>
             <button onclick="switchMainTab('part2')" id="tab-part2" class="tab-btn px-4 py-3 md:px-10 md:py-4 text-sm md:text-xl rounded-t-xl md:rounded-t-2xl text-gray-500 hover:text-blue-700 hover:bg-blue-50 transition-all border-b-4 border-transparent whitespace-nowrap">🖼️ 第二部分：簡報初稿視覺製作</button>
         </div>
 
-        <!-- ==================== 第一部分：資料蒐集 ==================== -->
+        <!-- ==================== 第一部分：資料搜集 ==================== -->
         <div id="content-part1" class="bg-white p-4 md:p-10 rounded-b-2xl rounded-tr-2xl shadow-2xl border border-gray-100">
             
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-10 mb-10">
@@ -323,6 +323,14 @@
                         <div class="flex items-center justify-between bg-white p-2.5 md:p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
                             <label class="flex items-center space-x-3 cursor-pointer flex-grow font-bold text-gray-700 text-sm md:text-base"><input type="checkbox" name="ai-platform" value="Poe" class="w-4 h-4 md:w-5 md:h-5 accent-blue-600"><span>Poe</span></label>
                             <a href="https://poe.com/" target="_blank" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-bold border border-blue-200">🔗 前往</a>
+                        </div>
+                        <!-- 新增「其他」選項 -->
+                        <div class="flex items-center bg-white p-2.5 md:p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition sm:col-span-2">
+                            <label class="flex items-center space-x-3 cursor-pointer font-bold text-gray-700 text-sm md:text-base whitespace-nowrap">
+                                <input type="checkbox" name="ai-platform" value="其他" class="w-4 h-4 md:w-5 md:h-5 accent-blue-600">
+                                <span>其他：</span>
+                            </label>
+                            <input type="text" id="ai-other-input" class="ml-3 flex-grow border-b-2 border-gray-200 px-2 py-1 outline-none focus:border-blue-500 text-sm md:text-base bg-transparent transition" placeholder="請填寫您選擇的 AI 平台名稱">
                         </div>
                     </div>
                 </div>
@@ -393,7 +401,7 @@
             <!-- 3. 論證結構表格 (動態新增) -->
             <div class="bg-gradient-to-br from-emerald-50 to-green-50 p-4 md:p-6 rounded-2xl border-2 border-emerald-300 mb-8 relative shadow-md">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-5 border-b border-emerald-200 pb-3">
-                    <h3 class="text-base md:text-lg font-black text-emerald-900 border-l-8 border-emerald-600 pl-3">4. 資料蒐集與論證結構 (鋪排簡報內容)：</h3>
+                    <h3 class="text-base md:text-lg font-black text-emerald-900 border-l-8 border-emerald-600 pl-3">4. 資料搜集與論證結構 (鋪排簡報內容)：</h3>
                     <button onclick="openTableExample()" class="w-full md:w-auto bg-gradient-to-r from-orange-400 to-red-500 text-white px-5 py-2 rounded-full text-sm font-bold hover:shadow-lg hover:scale-105 transition flex items-center justify-center gap-2">
                         <span class="text-lg">👀</span> 點擊看填寫示範
                     </button>
@@ -699,7 +707,7 @@
 
     <!-- 用於生成 Word 的隱藏渲染區塊 -->
     <div id="pdf-render-area" class="bg-white text-black font-sans p-8 w-[800px] mx-auto hidden">
-        <h1 class="text-3xl font-black text-center border-b-4 border-gray-800 pb-4 mb-6">專題研習：資料蒐集與分析報告</h1>
+        <h1 class="text-3xl font-black text-center border-b-4 border-gray-800 pb-4 mb-6">專題研習：資料搜集與分析報告</h1>
         
         <table class="w-full border-collapse border border-gray-800 mb-8 text-sm" style="border: 2px solid black;">
             <tr>
@@ -728,7 +736,7 @@
             </tr>
         </table>
 
-        <h3 class="font-black text-xl border-l-8 border-gray-800 pl-3 mb-3 mt-8 bg-gray-100 py-1">一、 資料蒐集過程</h3>
+        <h3 class="font-black text-xl border-l-8 border-gray-800 pl-3 mb-3 mt-8 bg-gray-100 py-1">一、 資料搜集過程</h3>
         <p class="text-base mb-2 ml-3 font-bold">1. 使用 AI 平台：<span id="pdf-ai-platform" class="font-normal text-blue-700 ml-2"></span></p>
         
         <p class="text-base mb-2 mt-5 ml-3 font-bold">2. 從 AI 獲得的原始資料結構：</p>
@@ -1124,7 +1132,7 @@
             
             document.getElementById('ws-topic-title').innerText = currentTopicObj.title;
             document.getElementById('ws-target-title').innerText = `論證目標對象：${stuTarget}`;
-            document.getElementById('ws-student-info').innerHTML = `<strong>${stuClass} 第${stuGroup}組</strong> | ${document.getElementById('stu-id').value} ${stuName} (負責: ${stuPart})`;
+            document.getElementById('ws-student-info').innerHTML = `<strong>${stuClass} 第${stuGroup}組</strong> \vert{} ${document.getElementById('stu-id').value} ${stuName} (負責: ${stuPart})`;
 
             switchMainTab('part1');
             buildSlideNav();
@@ -1166,7 +1174,7 @@
         function checkPart1AndGoPart2() { switchMainTab('part2'); }
 
         function saveProgress() {
-            const inputIds = ['stu-class', 'stu-group', 'stu-id', 'stu-name', 'stu-target', 'stu-part'];
+            const inputIds = ['stu-class', 'stu-group', 'stu-id', 'stu-name', 'stu-target', 'stu-part', 'ai-other-input'];
             let formData = {};
             inputIds.forEach(id => {
                 if(document.getElementById(id)) formData[id] = document.getElementById(id).value;
@@ -1477,7 +1485,13 @@
             document.getElementById('pdf-target').innerText = document.getElementById('stu-target').value;
             document.getElementById('pdf-subtopic').innerText = document.getElementById('stu-part').value;
             
-            const aiChecked = Array.from(document.querySelectorAll('input[name="ai-platform"]:checked')).map(el => el.value);
+            const aiChecked = Array.from(document.querySelectorAll('input[name="ai-platform"]:checked')).map(el => {
+                if (el.value === '其他') {
+                    const otherVal = document.getElementById('ai-other-input').value.trim();
+                    return otherVal ? `其他 (${otherVal})` : '其他';
+                }
+                return el.value;
+            });
             document.getElementById('pdf-ai-platform').innerText = aiChecked.join(', ') || '未選擇';
             
             let rawList = "";
@@ -1546,7 +1560,7 @@
             const fileDownload = document.createElement("a");
             document.body.appendChild(fileDownload);
             fileDownload.href = source;
-            fileDownload.download = getFileName('資料蒐集報告') + '.doc';
+            fileDownload.download = getFileName('資料搜集報告') + '.doc';
             fileDownload.click();
             document.body.removeChild(fileDownload);
             
