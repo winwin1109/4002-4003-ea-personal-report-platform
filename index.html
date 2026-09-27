@@ -1046,7 +1046,7 @@
                          <option value="二手資料">二手資料</option><option value="一手資料">一手資料</option><option value="一手及二手資料">一手及二手</option>
                      </select>
                  </td>
-                 <td class="p-2 align-middle border-t border-gray-100"><input type="text" id="arg-mth-${dirId}-${evIdx}" class="w-full border border-gray-300 rounded p-2 outline-none ${focusClass} bg-gray-50" placeholder="例:資料篩選及分析"></td>
+                 <td class="p-2 align-middle border-t border-gray-100"><input type="text" id="arg-mth-${dirId}-${evIdx}" class="w-full border border-gray-300 rounded p-2 outline-none ${focusClass} bg-gray-50" placeholder="例:資料搜集及分析"></td>
              `;
              return tr;
         }
@@ -1132,7 +1132,7 @@
             
             document.getElementById('ws-topic-title').innerText = currentTopicObj.title;
             document.getElementById('ws-target-title').innerText = `論證目標對象：${stuTarget}`;
-            document.getElementById('ws-student-info').innerHTML = `<strong>${stuClass} 第${stuGroup}組</strong> \vert{} ${document.getElementById('stu-id').value} ${stuName} (負責: ${stuPart})`;
+            document.getElementById('ws-student-info').innerHTML = `<strong>${stuClass} 第${stuGroup}組</strong> | ${document.getElementById('stu-id').value} ${stuName} (負責: ${stuPart})`;
 
             switchMainTab('part1');
             buildSlideNav();
@@ -1544,6 +1544,48 @@
             document.getElementById('pdf-data-args').innerHTML = argsListHTML || '<tr><td colspan="4" style="border: 1px solid #666; padding: 8px; text-align:center;">未填寫</td></tr>';
         }
 
+        // ===== 新增的輔助函數：處理跨平台檔案下載與分享 =====
+        async function triggerDownload(blob, fileName) {
+            const isMobile = /iphone|ipad|ipod|android/i.test(window.navigator.userAgent.toLowerCase());
+
+            // 備用下載方案 (適用於電腦版或不支援分享的環境)
+            const fallbackDownload = () => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                document.body.appendChild(a);
+                a.style.display = "none";
+                a.href = url;
+                a.download = fileName;
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => window.URL.revokeObjectURL(url), 100);
+            };
+
+            // 如果是手機/平板，且支援檔案分享 API (iOS 15+ / Android)
+            if (isMobile && navigator.share && navigator.canShare) {
+                try {
+                    const file = new File([blob], fileName, { type: blob.type });
+                    // 檢查系統是否允許分享該格式
+                    if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            files: [file],
+                            title: fileName,
+                            text: '請選擇「儲存到檔案」或傳送至其他應用程式'
+                        });
+                        return; // 分享成功即結束
+                    }
+                } catch (err) {
+                    // 若使用者手動取消分享 (AbortError)，則不處理；其他錯誤則使用備用下載
+                    if (err.name !== 'AbortError') fallbackDownload();
+                    return;
+                }
+            }
+
+            // 若不支援 Web Share API 或為電腦版，直接執行傳統下載
+            fallbackDownload();
+        }
+
+        // ===== Word 匯出函數 =====
         function exportWord() {
             saveProgress();
             syncExportData();
@@ -1556,18 +1598,19 @@
             const footer = "</body></html>";
             const sourceHTML = header + el.innerHTML + footer;
             
-            const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
-            const fileDownload = document.createElement("a");
-            document.body.appendChild(fileDownload);
-            fileDownload.href = source;
-            fileDownload.download = getFileName('資料搜集報告') + '.doc';
-            fileDownload.click();
-            document.body.removeChild(fileDownload);
-            
+            // 隱藏渲染區塊 (必須在觸發下載前隱藏，以免手機卡在渲染畫面)
             el.style.display = 'none';
             el.classList.add('hidden');
+
+            // 建立具有 BOM 的 Blob 以支援 UTF-8 (解決 iOS 亂碼與下載問題)
+            const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' });
+            const fileName = getFileName('資料搜集報告') + '.doc';
+            
+            // 呼叫跨平台下載函數
+            triggerDownload(blob, fileName);
         }
 
+        // ===== PPTX 匯出函數 =====
         function exportPPTX() {
             saveProgress();
             let pptx = new PptxGenJS();
@@ -1636,7 +1679,15 @@
                 if(imgOpts) slide.addImage(imgOpts);
             }
 
-            pptx.writeFile({ fileName: getFileName('口頭報告初稿') + '.pptx' });
+            // 將 PPTX 轉出為 Blob 並呼叫原生分享/下載
+            pptx.write({ outputType: "blob" }).then(data => {
+                const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
+                const fileName = getFileName('口頭報告初稿') + '.pptx';
+                triggerDownload(blob, fileName);
+            }).catch(err => {
+                console.error("PPTX 匯出失敗", err);
+                alert("PPTX 匯出失敗，請稍後再試。");
+            });
         }
 
         function checkTeacherLock() {
