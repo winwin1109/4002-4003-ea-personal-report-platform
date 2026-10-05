@@ -272,7 +272,7 @@
         <!-- 模塊切換 Tabs -->
         <div class="flex border-b-4 border-gray-200 mb-6 md:mb-8 px-2 md:px-4 gap-1 md:gap-2 overflow-x-auto">
             <button onclick="switchMainTab('part1')" id="tab-part1" class="tab-btn active px-4 py-3 md:px-10 md:py-4 text-sm md:text-xl rounded-t-xl md:rounded-t-2xl bg-white border-t-2 border-l-2 border-r-2 border-gray-200 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] transition-all whitespace-nowrap">📝 第一部分：資料搜集與論證結構</button>
-            <button onclick="switchMainTab('part2')" id="tab-part2" class="tab-btn px-4 py-3 md:px-10 md:py-4 text-sm md:text-xl rounded-t-xl md:rounded-t-2xl text-gray-500 hover:text-blue-700 hover:bg-blue-50 transition-all border-b-4 border-transparent whitespace-nowrap">🖼️ 第二部分：簡報初稿視覺製作</button>
+            <button onclick="switchMainTab('part2')" id="tab-part2" class="tab-btn px-4 py-3 md:px-10 md:py-4 text-sm md:text-xl rounded-t-xl md:rounded-t-2xl text-gray-500 hover:text-blue-700 hover:bg-blue-50 transition-all border-b-4 border-transparent whitespace-nowrap">🖼️️ 第二部分：簡報初稿視覺製作</button>
         </div>
 
         <!-- ==================== 第一部分：資料搜集 ==================== -->
@@ -417,9 +417,24 @@
                     </p>
                 </div>
 
-                <p class="text-xs md:text-sm text-red-600 mt-2 mb-2 font-bold bg-red-50 p-3 rounded-lg border border-red-200 shadow-sm flex items-center gap-2">
-                    <span class="text-xl">📌</span> 備註：如沒有次分論點，可只填寫分論點和提供第一手資料及第二手資料。
+                <p class="text-xs md:text-sm text-red-600 mt-2 mb-4 font-bold bg-red-50 p-3 rounded-lg border border-red-200 shadow-sm flex items-start gap-2">
+                    <span class="text-xl mt-0.5">📌</span> 
+                    <span>備註：如沒有次分論點，可只填寫分論點、論據(必須提供第一手及第二手資料)、資料搜集方法和論證方法(可參考填寫示範)。<br>次分論點留空即可。</span>
                 </p>
+
+                <!-- 分論點與隱藏框線備註區塊 -->
+                <div class="w-full mb-4">
+                    <table class="w-full text-xs md:text-sm border-collapse">
+                        <tbody>
+                            <tr>
+                                <td width="22%" class="py-3 px-4 text-center font-bold text-white bg-emerald-600 border border-emerald-600">分論點</td>
+                                <td class="p-0 border border-emerald-600 bg-white">
+                                    <input type="text" id="main-argument-input" class="w-full h-full p-3 outline-none focus:ring-2 focus:ring-emerald-400 font-bold text-gray-800" placeholder="請寫入您的分論點...">
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
                 
                 <div class="overflow-x-auto rounded-xl border border-emerald-200 shadow-sm">
                     <table class="data-table w-full bg-white text-xs md:text-sm" id="args-table-container">
@@ -527,7 +542,7 @@
                 <!-- 右側：PPT 顯示屏與匯出 -->
                 <div class="preview-panel relative">
                     <div class="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 border-b border-gray-200 pb-4 sticky top-0 bg-[#f8fafc] z-10">
-                        <h3 class="font-black text-gray-800 text-base md:text-lg flex items-center gap-2"><span class="text-xl md:text-2xl">🖥️</span> 完成的 PPT 顯示屏</h3>
+                        <h3 class="font-black text-gray-800 text-base md:text-lg flex items-center gap-2"><span class="text-xl md:text-2xl">🖥</span> 完成的 PPT 顯示屏</h3>
                         <div class="flex gap-2 items-center bg-white p-1.5 md:p-2 rounded-lg shadow-sm border border-gray-200 w-full sm:w-auto overflow-x-auto">
                             <select id="theme-style-selector" class="border-0 p-1 rounded text-xs md:text-sm outline-none font-bold text-blue-900 bg-transparent cursor-pointer" onchange="updateUITheme()">
                                 <option value="theme-office">🏢 商務專業</option>
@@ -535,7 +550,7 @@
                                 <option value="theme-nature">🌿 綠色自然</option>
                                 <option value="theme-design">🎨 創意視覺</option>
                                 <option value="theme-tech">💻 科技未來</option>
-                                <option value="theme-catering">🍽️ 典雅餐飲</option>
+                                <option value="theme-catering">🍽 典雅餐飲</option>
                                 <option value="theme-construction">🚧 工業重裝</option>
                                 <option value="theme-minimalist">🤍 留白簡約</option>
                             </select>
@@ -975,6 +990,7 @@
         let slideDataStore = { 1:{}, 2:{}, 3:{}, 4:{}, 5:{} };
         let slideImages = {}; 
         let totalSlides = 5; 
+        let hasAutoSynced = false; // 新增：追蹤是否已經自動同步過
 
         window.onload = () => {
             const grid = document.getElementById('topic-grid');
@@ -1141,7 +1157,101 @@
             saveProgress(); 
         }
 
-        function switchMainTab(tab) {
+        // 新增：根據表格資料自動匯入並構建 PPT 講稿的函數
+        function syncTableToSlides() {
+            let mainArg = document.getElementById('main-argument-input') ? document.getElementById('main-argument-input').value.trim() : "";
+            let subArgsList = [];
+            let flatEvidences = [];
+
+            for(let i=1; i<=argDirCount; i++) {
+                let dirElem = document.getElementById(`arg-dir-${i}`);
+                if(!dirElem) continue;
+                let dir = dirElem.value.trim();
+                
+                let count = evCount[i] || 2;
+                let hasEvidence = false;
+                
+                // 收集論據
+                for(let j=1; j<=count; j++) {
+                    let evElem = document.getElementById(`arg-ev-${i}-${j}`);
+                    if(!evElem) continue;
+                    let ev = evElem.value.trim();
+                    if(ev) {
+                        flatEvidences.push({ title: dir, text: ev });
+                        hasEvidence = true;
+                    }
+                }
+                
+                // 如果有填寫次分論點名稱，就收集起來給第一頁使用 (避免重複)
+                if (dir && !subArgsList.includes(dir)) {
+                    subArgsList.push(dir);
+                }
+            }
+
+            // --- 匯入第 1 頁 (指出分論點) ---
+            let slide1Content = subArgsList.length > 0 ? subArgsList.map(s => `• ${s}`).join('\n') : "";
+            slideDataStore[1] = {
+                title: mainArg,
+                text: slide1Content,
+                imgPos: slideDataStore[1]?.imgPos || "right"
+            };
+
+            // --- 計算論據頁數量並更新總頁數 ---
+            let evSlideCount = flatEvidences.length > 0 ? flatEvidences.length : 3; // 若無資料，預設提供 3 頁空白論據頁
+            totalSlides = 1 + evSlideCount + 1; // 1頁開頭 + N頁論據 + 1頁總結
+
+            // --- 匯入各論據頁 (第 2 頁開始) ---
+            for(let k=0; k < evSlideCount; k++) {
+                let slideIdx = 2 + k;
+                let targetTitle = "";
+                let targetText = "";
+                if (k < flatEvidences.length) {
+                    targetTitle = flatEvidences[k].title; 
+                    targetText = flatEvidences[k].text ? `• ${flatEvidences[k].text}` : "";
+                }
+                slideDataStore[slideIdx] = {
+                    title: targetTitle,
+                    text: targetText,
+                    imgPos: slideDataStore[slideIdx]?.imgPos || "right" // 保留原有的圖片排版設定
+                };
+            }
+
+            // --- 處理最後 1 頁 (總結) ---
+            slideDataStore[totalSlides] = {
+                title: slideDataStore[totalSlides]?.title || "總結",
+                text: slideDataStore[totalSlides]?.text || "",
+                imgPos: slideDataStore[totalSlides]?.imgPos || "right"
+            };
+
+            // --- 清除多餘的舊頁面資料 ---
+            Object.keys(slideDataStore).forEach(key => {
+                if (parseInt(key) > totalSlides) {
+                    delete slideDataStore[key];
+                }
+            });
+
+            // 更新介面
+            buildSlideNav();
+            openSlide(1, true);
+            saveProgress();
+        }
+
+        // 修改：處理點擊大按鈕時的同步與提示邏輯
+        function checkPart1AndGoPart2() { 
+            if (!hasAutoSynced) {
+                // 第一次進入，直接靜默同步
+                syncTableToSlides();
+                hasAutoSynced = true;
+            } else {
+                // 之後再進入，跳出提示詢問是否要更新簡報覆蓋現有文字
+                if(confirm("是否將「資料搜集與論證結構」最新填寫的內容自動匯入簡報中？\n\n⚠️ 注意：\n按「確定」將會自動輸出對應資料並覆蓋您目前在簡報區修改過的標題與講稿文字 (已上傳的相片會保留)。\n按「取消」則保留目前的簡報文字，直接進入簡報製作。")) {
+                    syncTableToSlides();
+                }
+            }
+            switchMainTab('part2', true); // 傳入 true 避免在 switchMainTab 中重複執行同步邏輯
+        }
+
+        function switchMainTab(tab, skipSyncCheck = false) {
             const btn1 = document.getElementById('tab-part1');
             const btn2 = document.getElementById('tab-part2');
             const content1 = document.getElementById('content-part1');
@@ -1160,6 +1270,13 @@
                 if(!document.getElementById('ethics-1').checked || !document.getElementById('ethics-2').checked) {
                     alert("進入簡報製作前，請先閱讀並同意「真相核查員」聲明！"); return;
                 }
+
+                // 處理使用者直接點擊上方 Tab 切換的情況
+                if (!skipSyncCheck && !hasAutoSynced) {
+                    syncTableToSlides();
+                    hasAutoSynced = true;
+                }
+
                 content1.classList.add('hidden');
                 content2.classList.remove('hidden');
                 btn2.classList.add('active', 'text-blue-700', 'shadow-[0_-5px_15px_rgba(0,0,0,0.05)]', 'bg-white', 'border-t-2', 'border-l-2', 'border-r-2', 'border-gray-200');
@@ -1171,10 +1288,8 @@
             saveProgress();
         }
 
-        function checkPart1AndGoPart2() { switchMainTab('part2'); }
-
         function saveProgress() {
-            const inputIds = ['stu-class', 'stu-group', 'stu-id', 'stu-name', 'stu-target', 'stu-part', 'ai-other-input'];
+            const inputIds = ['stu-class', 'stu-group', 'stu-id', 'stu-name', 'stu-target', 'stu-part', 'ai-other-input', 'main-argument-input'];
             let formData = {};
             inputIds.forEach(id => {
                 if(document.getElementById(id)) formData[id] = document.getElementById(id).value;
@@ -1210,6 +1325,7 @@
                 argDirCount: argDirCount,
                 evCount: evCount,
                 totalSlides: totalSlides,
+                hasAutoSynced: hasAutoSynced, // 儲存同步狀態
                 themeStyle: document.getElementById('theme-style-selector') ? document.getElementById('theme-style-selector').value : 'theme-office',
                 themeColor: document.getElementById('theme-color') ? document.getElementById('theme-color').value : '#283593',
                 timestamp: new Date().getTime()
@@ -1270,6 +1386,7 @@
                     if(state.totalSlides) totalSlides = state.totalSlides;
                     if(state.slideDataStore) slideDataStore = state.slideDataStore;
                     if(state.slideImages) slideImages = slideImages;
+                    if(state.hasAutoSynced !== undefined) hasAutoSynced = state.hasAutoSynced; // 載入同步狀態
                     
                     if(state.themeStyle && document.getElementById('theme-style-selector')) document.getElementById('theme-style-selector').value = state.themeStyle;
                     if(state.themeColor && document.getElementById('theme-color')) document.getElementById('theme-color').value = state.themeColor;
@@ -1329,13 +1446,15 @@
             }
         }
 
+        // 修改：動態產生導覽按鈕標題，以支援無限增長的論據頁
         function getSlideTitle(index) {
             if (index === 1) return "指出分論點";
-            if (index === 2) return "論據一";
-            if (index === 3) return "論據二";
-            if (index === 4) return "論據三";
-            if (index === totalSlides) return "分論點總結";
-            return `額外論據 (${index - 4})`;
+            if (index === totalSlides && totalSlides > 1) return "分論點總結";
+            
+            const cny = ['一','二','三','四','五','六','七','八','九','十'];
+            let idx = index - 1; 
+            if (idx <= 10 && idx > 0) return `論據${cny[idx-1]}`;
+            return `論據 (${idx})`;
         }
 
         function buildSlideNav() {
@@ -1820,7 +1939,8 @@
 
                 <section class="bg-gradient-to-r from-orange-50 to-amber-50 p-4 rounded-xl border border-orange-200 mt-4">
                     <h3 class="font-bold text-base md:text-lg text-amber-900 mb-2">3. 專屬指示語生成器範本 (共 3 款)</h3>
-                    <p class="text-xs md:text-sm text-amber-800 mb-3">請套用「設定角色 ➔ 定義任務 ➔ 導向調查」的框架，從以下 3 款範本中選擇適合的複製給 AI，學以致用：</p>
+                    <p class="text-xs md:text-sm text-amber-800 mb-1">請套用「設定角色 ➔ 定義任務 ➔ 導向調查」的框架，從以下 3 款範本中選擇適合的複製給 AI，學以致用：</p>
+                    <p class="text-xs md:text-sm text-indigo-800 font-bold mb-3">💡 你可以用自己寫好的分論點替換範本中的分論點，找出更切合自己觀點的調查方向。</p>
                     
                     <div class="grid grid-cols-1 gap-4 max-h-[50vh] overflow-y-auto pr-2">
                         <!-- 範本 1 -->
